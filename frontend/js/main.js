@@ -1,7 +1,16 @@
 // Luxe Auto Resort - Main JavaScript
 
-// API Configuration
-const API_BASE = 'http://localhost:3000/api';
+// API Configuration - Dynamic for LAN access
+const API_BASE = (() => {
+  const hostname = window.location.hostname;
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
+  const port = isLocalhost ? '3000' : window.location.port || '3000';
+  return `http://${hostname}:${port}/api`;
+})();
+
+// Debug info (remove in production)
+console.log(`API Base URL: ${API_BASE}`);
+console.log(`Accessing from: ${window.location.href}`);
 
 // Auth State
 const auth = {
@@ -25,7 +34,7 @@ const auth = {
   }
 };
 
-// API Helper
+// API Helper with Error Handling
 const api = {
   async request(endpoint, options = {}) {
     const headers = {
@@ -40,27 +49,57 @@ const api = {
     try {
       const response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
-        headers
+        headers,
+        credentials: 'include'
       });
+      
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Non-JSON response:', text);
+        throw new Error('Сървърът върна неочакван отговор');
+      }
       
       const data = await response.json();
       
       if (!response.ok) {
+        // Handle specific error codes
+        if (response.status === 401) {
+          auth.logout();
+          throw new Error('Моля, влезте отново');
+        }
+        if (response.status === 403) {
+          throw new Error('Нямате права за това действие');
+        }
+        if (response.status === 404) {
+          throw new Error('Ресурсът не е намерен');
+        }
+        if (response.status >= 500) {
+          throw new Error('Грешка на сървъра. Моля, опитайте по-късно');
+        }
         throw new Error(data.error || 'Възникна грешка');
       }
       
       return data;
     } catch (error) {
+      // Network error handling
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        console.error('Network error:', error);
+        throw new Error('Няма връзка със сървъра. Проверете дали backend-ът работи.');
+      }
       console.error('API Error:', error);
       throw error;
     }
   },
   
   get(endpoint) {
+    console.log(`GET: ${API_BASE}${endpoint}`);
     return this.request(endpoint);
   },
   
   post(endpoint, body) {
+    console.log(`POST: ${API_BASE}${endpoint}`);
     return this.request(endpoint, {
       method: 'POST',
       body: JSON.stringify(body)
@@ -154,13 +193,44 @@ const ui = {
   }
 };
 
-// Mobile Menu Toggle
+// Mobile Menu Toggle - Touch-friendly
 function toggleMobileMenu() {
   const nav = document.querySelector('nav ul');
   if (nav) {
     nav.classList.toggle('active');
+    
+    // Prevent body scroll when menu is open
+    if (nav.classList.contains('active')) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
   }
 }
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', (e) => {
+  const nav = document.querySelector('nav ul');
+  const menuBtn = document.querySelector('.mobile-menu-btn');
+  
+  if (nav && nav.classList.contains('active')) {
+    if (!nav.contains(e.target) && !menuBtn.contains(e.target)) {
+      nav.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  }
+});
+
+// Close mobile menu when pressing Escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const nav = document.querySelector('nav ul');
+    if (nav && nav.classList.contains('active')) {
+      nav.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+  }
+});
 
 // Header Update (for logged in users)
 function updateHeaderForAuth() {

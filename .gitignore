@@ -111,4 +111,5 @@ temp/
 # ================= #
 lar.png
 TODO.md
-
+TODO2.md
+backend/.env.example
