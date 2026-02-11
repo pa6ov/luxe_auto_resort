@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Luxe Auto Resort - Луксозно наемане на автомобили</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html" class="active">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="container">
+      <h1>Луксозно <span>наемане</span> на автомобили</h1>
+      <p>Открийте най-големия избор от премиум автомобили на най-добри цени</p>
+      <a href="cars.html" class="btn btn-primary btn-lg">Разгледайте колите</a>
+    </div>
+  </section>
+
+  <!-- Search Section -->
+  <section id="search">
+    <div class="container">
+      <h2>Бързо <span>търсене</span></h2>
+      <div class="filters">
+        <div class="filters-grid">
+          <div class="form-group">
+            <label for="searchBrand">Марка</label>
+            <input type="text" id="searchBrand" placeholder="напр. Mercedes">
+          </div>
+          <div class="form-group">
+            <label for="searchType">Тип</label>
+            <select id="searchType">
+              <option value="">Всички типове</option>
+              <option value="sedan">Седан</option>
+              <option value="suv">SUV</option>
+              <option value="coupe">Купе</option>
+              <option value="minivan">Миниван</option>
+              <option value="sport">Спортен</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="searchMinPrice">Мин. цена</label>
+            <input type="number" id="searchMinPrice" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="searchMaxPrice">Макс. цена</label>
+            <input type="number" id="searchMaxPrice" placeholder="500">
+          </div>
+          <div class="form-group">
+            <button class="btn btn-primary" onclick="searchCars()" style="width:100%">Търси</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Cars -->
+  <section id="featured">
+    <div class="container">
+      <h2>Препоръчани <span>автомобили</span></h2>
+      <div id="featuredCars" class="car-grid">
+        <div class="loading">Зареждане на автомобили...</div>
+      </div>
+      <div style="text-align:center; margin-top:20px;">
+        <a href="cars.html" class="btn btn-outline">Виж всички автомобили</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Templates Section -->
+  <section id="templates" style="background-color: rgba(75, 136, 162, 0.05);">
+    <div class="container">
+      <h2>Нашите <span>пакети</span></h2>
+      <div id="templateList" class="template-grid">
+        <div class="loading">Зареждане на пакети...</div>
+      </div>
+      <div style="text-align:center; margin-top:20px;">
+        <a href="templates.html" class="btn btn-outline">Виж всички пакети</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Why Choose Us -->
+  <section id="why-us">
+    <div class="container">
+      <h2>Защо да изберете <span>нас</span></h2>
+      <div class="dashboard-grid">
+        <div class="dashboard-card">
+          <h3>🚗</h3>
+          <p>20+ Премиум автомобила</p>
+        </div>
+        <div class="dashboard-card">
+          <h3>💰</h3>
+          <p>Най-добри цени на пазара</p>
+        </div>
+        <div class="dashboard-card">
+          <h3>⏰</h3>
+          <p>24/7 Поддръжка</p>
+        </div>
+        <div class="dashboard-card">
+          <h3>🛡️</h3>
+          <p>Пълна застраховка</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <h3>Luxe Auto Resort</h3>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили. Ние предлагаме най-доброто преживяване за нашите клиенти.</p>
+        </div>
+        <div>
+          <h3>Бързи връзки</h3>
+          <ul>
+            <li><a href="index.html">Начало</a></li>
+            <li><a href="cars.html">Автомобили</a></li>
+            <li><a href="templates.html">Шаблони</a></li>
+            <li><a href="contacts.html">Контакти</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Контакти</h3>
+          <ul>
+            <li>📍 София, България</li>
+            <li>📞 +359 888 123 456</li>
+            <li>✉️ info@luxeauto.bg</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Load featured cars
+    async function loadFeaturedCars() {
+      const container = document.getElementById('featuredCars');
+      
+      try {
+        const cars = await LuxeAuto.api.get('/cars?available=true&sort=price_desc');
+        const featured = cars.slice(0, 6);
+        
+        if (featured.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>Няма налични автомобили</h3></div>';
+          return;
+        }
+        
+        container.innerHTML = featured.map(car => LuxeAuto.createCarCard(car)).join('');
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    // Load templates
+    async function loadTemplates() {
+      const container = document.getElementById('templateList');
+      
+      try {
+        const templates = await LuxeAuto.api.get('/templates');
+        
+        if (templates.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>Няма налични пакети</h3></div>';
+          return;
+        }
+        
+        container.innerHTML = templates.map(t => LuxeAuto.createTemplateCard(t)).join('');
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    // Search cars
+    async function searchCars() {
+      const brand = document.getElementById('searchBrand').value;
+      const type = document.getElementById('searchType').value;
+      const minPrice = document.getElementById('searchMinPrice').value;
+      const maxPrice = document.getElementById('searchMaxPrice').value;
+      
+      let url = '/cars?available=true';
+      if (brand) url += `&brand=${encodeURIComponent(brand)}`;
+      if (type) url += `&type=${type}`;
+      if (minPrice) url += `&min_price=${minPrice}`;
+      if (maxPrice) url += `&max_price=${maxPrice}`;
+      
+      window.location.href = `cars.html${url}`;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      loadFeaturedCars();
+      loadTemplates();
+    });
+  </script>
+</body>
+</html>
+

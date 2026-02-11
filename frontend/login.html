@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вход - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Вход в <span>профила</span></h1>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="auth-container">
+        <h1>Вход</h1>
+        <div id="message"></div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="email">Имейл</label>
+            <input type="email" id="email" name="email" required placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label for="password">Парола</label>
+            <input type="password" id="password" name="password" required placeholder="Вашата парола">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Вход</button>
+        </form>
+        <div class="auth-footer">
+          <p>Нямате профил? <a href="register.html">Регистрирайте се</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (LuxeAuto.auth.isLoggedIn()) {
+      window.location.href = 'index.html';
+    }
+
+    // Handle login
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageDiv = document.getElementById('message');
+      messageDiv.innerHTML = '<div class="loading">Влизане...</div>';
+      
+      try {
+        const data = await LuxeAuto.api.post('/auth/login', {
+          email: document.getElementById('email').value,
+          password: document.getElementByById('password').value
+        });
+        
+        // Save auth data
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        messageDiv.innerHTML = '<div class="alert alert-success">Успешен вход! Пренасочване...</div>';
+        
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1000);
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Мнения - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html" class="active">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Мнения и <span>отзиви</span></h1>
+      <p>Вижте какво казват нашите клиенти</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <!-- Add Comment Form (only for logged in users) -->
+      <div id="commentFormContainer"></div>
+
+      <!-- Comments List -->
+      <div class="card" style="margin-top:30px;">
+        <h3 style="color:var(--cta); margin-bottom:25px;">💬 Всички мнения</h3>
+        <div id="commentsList">
+          <div class="loading">Зареждане на мнения...</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <h3>Luxe Auto Resort</h3>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили.</p>
+        </div>
+        <div>
+          <h3>Бързи връзки</h3>
+          <ul>
+            <li><a href="index.html">Начало</a></li>
+            <li><a href="cars.html">Автомобили</a></li>
+            <li><a href="templates.html">Шаблони</a></li>
+            <li><a href="contacts.html">Контакти</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Контакти</h3>
+          <ul>
+            <li>📍 София, България</li>
+            <li>📞 +359 888 123 456</li>
+            <li>✉️ info@luxeauto.bg</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    let selectedRating = 0;
+
+    function renderCommentForm() {
+      const container = document.getElementById('commentFormContainer');
+      
+      if (!LuxeAuto.auth.isLoggedIn()) {
+        container.innerHTML = `
+          <div class="card">
+            <p style="text-align:center;">
+              <a href="login.html">Влезте в профила си</a> или 
+              <a href="register.html">се регистрирайте</a>, за да оставите мнение
+            </p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="card">
+          <h3 style="color:var(--cta); margin-bottom:20px;">✍️ Оставете вашето мнение</h3>
+          <form id="commentForm">
+            <div class="form-group">
+              <label>Рейтинг</label>
+              <div class="rating" id="ratingStars" style="font-size:2rem; cursor:pointer;">
+                ${[1,2,3,4,5].map(i => `
+                  <span onclick="setRating(${i})" id="star-${i}">★</span>
+                `).join('')}
+              </div>
+              <input type="hidden" id="rating" name="rating" value="0">
+            </div>
+            <div class="form-group">
+              <label for="comment">Вашето мнение *</label>
+              <textarea id="comment" name="comment" required placeholder="Споделите вашето преживяване с нас..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Изпрати мнение</button>
+          </form>
+          <div id="formMessage"></div>
+        </div>
+      `;
+      
+      document.getElementById('commentForm').addEventListener('submit', submitComment);
+    }
+
+    function setRating(rating) {
+      selectedRating = rating;
+      document.getElementById('rating').value = rating;
+      
+      for (let i = 1; i <= 5; i++) {
+        const star = document.getElementById(`star-${i}`);
+        if (i <= rating) {
+          star.classList.add('active');
+        } else {
+          star.classList.remove('active');
+        }
+      }
+    }
+
+    async function submitComment(e) {
+      e.preventDefault();
+      const messageDiv = document.getElementById('formMessage');
+      messageDiv.innerHTML = '<div class="loading">Изпращане...</div>';
+      
+      try {
+        await LuxeAuto.api.post('/comments/platform', {
+          content: document.getElementById('comment').value,
+          rating: selectedRating || null
+        });
+        
+        messageDiv.innerHTML = '<div class="alert alert-success">Благодарим! Вашето мнение ще бъде публикувано след одобрение.</div>';
+        document.getElementById('commentForm').reset();
+        setRating(0);
+        loadComments();
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    async function loadComments() {
+      const container = document.getElementById('commentsList');
+      
+      try {
+        const comments = await LuxeAuto.api.get('/comments/platform');
+        
+        if (comments.length === 0) {
+          container.innerHTML = '<p style="text-align:center; color:rgba(236,229,240,0.6);">Все още няма мнения. Бъдете първият!</p>';
+          return;
+        }
+        
+        container.innerHTML = `<div class="comments-section">
+          ${comments.map(c => LuxeAuto.createCommentHTML(c)).join('')}
+        </div>`;
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      renderCommentForm();
+      loadComments();
+    });
+  </script>
+</body>
+</html>
+

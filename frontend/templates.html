@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Шаблони и пакети - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html" class="active">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Нашите <span>пакети</span></h1>
+      <p>Изберете идеалния пакет за вашето пътуване</p>
+    </div>
+  </section>
+
+  <section id="templates">
+    <div class="container">
+      <div id="templateList" class="template-grid">
+        <div class="loading">Зареждане на пакети...</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <h3>Luxe Auto Resort</h3>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили.</p>
+        </div>
+        <div>
+          <h3>Бързи връзки</h3>
+          <ul>
+            <li><a href="index.html">Начало</a></li>
+            <li><a href="cars.html">Автомобили</a></li>
+            <li><a href="templates.html">Шаблони</a></li>
+            <li><a href="contacts.html">Контакти</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Контакти</h3>
+          <ul>
+            <li>📍 София, България</li>
+            <li>📞 +359 888 123 456</li>
+            <li>✉️ info@luxeauto.bg</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    async function loadTemplates() {
+      const container = document.getElementById('templateList');
+      
+      try {
+        const templates = await LuxeAuto.api.get('/templates');
+        
+        if (templates.length === 0) {
+          container.innerHTML = '<div class="empty-state"><h3>Няма налични пакети</h3></div>';
+          return;
+        }
+        
+        container.innerHTML = templates.map(t => `
+          <div class="template-card">
+            <div class="template-icon">
+              ${t.name === 'Уикенд' ? '🏖️' : t.name === 'Седмичен' ? '📅' : '💼'}
+            </div>
+            <h3 class="template-name">${t.name}</h3>
+            <p class="template-duration">${t.duration_days} дни</p>
+            <div class="template-discount">${t.discount_percent}% отстъпка</div>
+            <p class="template-description">${t.description || 'Описание не е налично'}</p>
+            
+            ${t.options && t.options.length > 0 ? `
+              <div style="text-align:left; margin:15px 0; padding:15px; background:rgba(236,229,240,0.05); border-radius:8px;">
+                <p style="font-weight:600; margin-bottom:10px; color:var(--cta);">Включени екстри:</p>
+                <ul style="list-style:none; font-size:0.9rem;">
+                  ${t.options.filter(o => o.is_included).map(o => `
+                    <li style="margin-bottom:5px;">✓ ${o.name}</li>
+                  `).join('')}
+                  ${t.options.filter(o => !o.is_included).slice(0, 2).map(o => `
+                    <li style="margin-bottom:5px; opacity:0.7;">+ ${o.name} (${ui.formatPrice(o.price)})</li>
+                  `).join('')}
+                </ul>
+              </div>
+            ` : ''}
+            
+            <a href="create-request.html?template=${t.id}" class="btn btn-primary">Избери пакет</a>
+          </div>
+        `).join('');
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      loadTemplates();
+    });
+  </script>
+</body>
+</html>
+

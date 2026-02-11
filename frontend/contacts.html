@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Контакти - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html" class="active">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Свържете се с <span>нас</span></h1>
+      <p>Имате въпроси? Ние сме тук да ви помогнем</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:40px;">
+        <div>
+          <div class="card" style="margin-bottom:25px;">
+            <h3 style="color:var(--cta); margin-bottom:20px;">📬 Изпратете ни съобщение</h3>
+            <form id="contactForm">
+              <div class="form-group">
+                <label for="name">Име *</label>
+                <input type="text" id="name" name="name" required placeholder="Вашето име">
+              </div>
+              <div class="form-group">
+                <label for="email">Имейл *</label>
+                <input type="email" id="email" name="email" required placeholder="your@email.com">
+              </div>
+              <div class="form-group">
+                <label for="subject">Тема</label>
+                <input type="text" id="subject" name="subject" placeholder="За какво искате да говорим?">
+              </div>
+              <div class="form-group">
+                <label for="message">Съобщение *</label>
+                <textarea id="message" name="message" required placeholder="Вашето съобщение..."></textarea>
+              </div>
+              <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Изпрати</button>
+            </form>
+            <div id="formMessage"></div>
+          </div>
+        </div>
+        <div>
+          <div class="card" style="margin-bottom:25px;">
+            <h3 style="color:var(--cta); margin-bottom:20px;">📍 Информация за контакт</h3>
+            <div style="margin-bottom:20px;">
+              <p style="margin-bottom:10px;"><strong>📍 Адрес:</strong></p>
+              <p>София, България<br>ул. Примерна 123</p>
+            </div>
+            <div style="margin-bottom:20px;">
+              <p style="margin-bottom:10px;"><strong>📞 Телефон:</strong></p>
+              <p>+359 888 123 456</p>
+            </div>
+            <div style="margin-bottom:20px;">
+              <p style="margin-bottom:10px;"><strong>✉️ Имейл:</strong></p>
+              <p>info@luxeauto.bg</p>
+            </div>
+            <div>
+              <p style="margin-bottom:10px;"><strong>⏰ Работно време:</strong></p>
+              <p>Понеделник - Петък: 09:00 - 18:00<br>Събота: 10:00 - 16:00<br>Неделя: Почивка</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <h3>Luxe Auto Resort</h3>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили.</p>
+        </div>
+        <div>
+          <h3>Бързи връзки</h3>
+          <ul>
+            <li><a href="index.html">Начало</a></li>
+            <li><a href="cars.html">Автомобили</a></li>
+            <li><a href="templates.html">Шаблони</a></li>
+            <li><a href="contacts.html">Контакти</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Контакти</h3>
+          <ul>
+            <li>📍 София, България</li>
+            <li>📞 +359 888 123 456</li>
+            <li>✉️ info@luxeauto.bg</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    document.getElementById('contactForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageDiv = document.getElementById('formMessage');
+      messageDiv.innerHTML = '<div class="loading">Изпращане...</div>';
+      
+      try {
+        await LuxeAuto.api.post('/contacts', {
+          name: document.getElementById('name').value,
+          email: document.getElementById('email').value,
+          subject: document.getElementById('subject').value,
+          message: document.getElementById('message').value
+        });
+        
+        messageDiv.innerHTML = '<div class="alert alert-success">Съобщението е изпратено успешно! Ще се свържем с вас скоро.</div>';
+        document.getElementById('contactForm').reset();
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
+

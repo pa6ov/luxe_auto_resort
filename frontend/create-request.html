@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Създай заявка - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Създай <span>заявка</span></h1>
+      <p>Попълнете формата по-долу, за да направите резервация</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div id="requestFormContainer" style="max-width:800px; margin:0 auto;">
+        <div class="loading">Зареждане...</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedTemplate = urlParams.get('template');
+    const preselectedCar = urlParams.get('car');
+
+    // Check auth
+    if (!LuxeAuto.auth.isLoggedIn()) {
+      window.location.href = 'login.html?redirect=create-request.html';
+    }
+
+    let selectedCars = [];
+    let selectedTemplate = null;
+    let allCars = [];
+
+    async function initForm() {
+      const container = document.getElementById('requestFormContainer');
+      
+      // Load template if specified
+      if (preselectedTemplate) {
+        try {
+          selectedTemplate = await LuxeAuto.api.get(`/templates/${preselectedTemplate}`);
+        } catch (e) {
+          console.error('Template not found');
+        }
+      }
+
+      // Load cars
+      try {
+        allCars = await LuxeAuto.api.get('/cars?available=true');
+      } catch (e) {
+        allCars = [];
+      }
+
+      // Add preselected car
+      if (preselectedCar && !selectedCars.includes(preselectedCar)) {
+        selectedCars.push(preselectedCar);
+      }
+
+      renderForm(container);
+    }
+
+    function renderForm(container) {
+      const today = new Date().toISOString().split('T')[0];
+      
+      let html = `
+        <form id="requestForm">
+          <div class="card" style="margin-bottom:25px;">
+            <h3 style="color:var(--cta); margin-bottom:20px;">📅 Период на наем</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+              <div class="form-group">
+                <label for="start_date">Начална дата *</label>
+                <input type="date" id="start_date" name="start_date" required min="${today}">
+              </div>
+              <div class="form-group">
+                <label for="end_date">Крайна дата *</label>
+                <input type="date" id="end_date" name="end_date" required min="${today}">
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:25px;">
+            <h3 style="color:var(--cta); margin-bottom:20px;">🚗 Изберете автомобили *</h3>
+            <p style="margin-bottom:15px; color:rgba(236,229,240,0.7);">Изберете поне един автомобил (можете да изберете повече):</p>
+            <div id="carSelection" class="car-selection-grid">
+              ${renderCarSelection()}
+            </div>
+          </div>
+
+          <div class="card" style="margin-bottom:25px;">
+            <h3 style="color:var(--cta); margin-bottom:20px;">📝 Допълнителна информация</h3>
+            <div class="form-group">
+              <label for="notes">Бележки или специални искания</label>
+              <textarea id="notes" name="notes" placeholder="Ако имате специални изисквания, моля опишете ги тук..."></textarea>
+            </div>
+          </div>
+
+          <div id="priceCalculation" style="display:none;">
+            <div class="total-price" id="totalPrice">Обща цена: 0.00 лв.</div>
+          </div>
+
+          <div id="formMessage"></div>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%; margin-top:20px;">
+            Изпрати заявка
+          </button>
+        </form>
+      `;
+      
+      container.innerHTML = html;
+      
+      // Add event listeners
+      document.getElementById('start_date').addEventListener('change', updatePrice);
+      document.getElementById('end_date').addEventListener('change', updatePrice);
+      
+      document.getElementById('requestForm').addEventListener('submit', submitRequest);
+    }
+
+    function renderCarSelection() {
+      if (allCars.length === 0) {
+        return '<p>Няма налични автомобили</p>';
+      }
+      
+      return allCars.map(car => `
+        <label class="car-checkbox ${selectedCars.includes(car.id.toString()) ? 'selected' : ''}">
+          <input type="checkbox" value="${car.id}" 
+            ${selectedCars.includes(car.id.toString()) ? 'checked' : ''}
+            onchange="toggleCar(this)">
+          <div>
+            <strong>${car.brand} ${car.model}</strong><br>
+            <small>${ui.formatPrice(car.price_per_day)}/ден</small>
+          </div>
+        </label>
+      `).join('');
+    }
+
+    function toggleCar(checkbox) {
+      const id = checkbox.value;
+      const parent = checkbox.closest('.car-checkbox');
+      
+      if (checkbox.checked) {
+        if (!selectedCars.includes(id)) {
+          selectedCars.push(id);
+        }
+        parent.classList.add('selected');
+      } else {
+        selectedCars = selectedCars.filter(c => c !== id);
+        parent.classList.remove('selected');
+      }
+      
+      updatePrice();
+    }
+
+    function updatePrice() {
+      const priceDiv = document.getElementById('priceCalculation');
+      const startDate = document.getElementById('start_date').value;
+      const endDate = document.getElementById('end_date').value;
+      
+      if (!startDate || !endDate || selectedCars.length === 0) {
+        priceDiv.style.display = 'none';
+        return;
+      }
+      
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      
+      if (days <= 0) {
+        priceDiv.style.display = 'none';
+        return;
+      }
+      
+      let basePrice = 0;
+      selectedCars.forEach(id => {
+        const car = allCars.find(c => c.id.toString() === id);
+        if (car) {
+          basePrice += car.price_per_day;
+        }
+      });
+      
+      // Apply template discount
+      let discount = 0;
+      if (selectedTemplate) {
+        discount = selectedTemplate.discount_percent || 0;
+      }
+      
+      const totalPrice = basePrice * days * (1 - discount / 100);
+      
+      document.getElementById('totalPrice').innerHTML = `
+        ${selectedTemplate ? `
+          <div style="text-align:right; font-size:0.9rem; margin-bottom:5px;">
+            ${selectedTemplate.name} - ${selectedTemplate.discount_percent}% отстъпка
+          </div>
+        ` : ''}
+        ${ui.formatPrice(totalPrice)} 
+        <span style="font-size:0.9rem; font-weight:normal;">
+          (${days} дни × ${selectedCars.length} автомобил/а)
+        </span>
+      `;
+      
+      priceDiv.style.display = 'block';
+    }
+
+    async function submitRequest(e) {
+      e.preventDefault();
+      const messageDiv = document.getElementById('formMessage');
+      
+      const startDate = document.getElementById('start_date').value;
+      const endDate = document.getElementById('end_date').value;
+      
+      if (selectedCars.length === 0) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Моля изберете поне един автомобил</div>';
+        return;
+      }
+      
+      messageDiv.innerHTML = '<div class="loading">Изпращане на заявка...</div>';
+      
+      try {
+        const data = await LuxeAuto.api.post('/requests', {
+          template_id: selectedTemplate?.id || null,
+          car_ids: selectedCars.map(id => parseInt(id)),
+          start_date: startDate,
+          end_date: endDate,
+          notes: document.getElementById('notes').value
+        });
+        
+        messageDiv.innerHTML = `<div class="alert alert-success">
+          Заявката е изпратена успешно! 
+          <br>Обща цена: ${ui.formatPrice(data.total_price)}
+          <br><a href="my-requests.html">Вижте вашите заявки</a>
+        </div>`;
+        
+        // Clear form
+        document.getElementById('requestForm').reset();
+        selectedCars = [];
+        document.getElementById('priceCalculation').style.display = 'none';
+        
+        // Refresh car selection
+        document.getElementById('carSelection').innerHTML = renderCarSelection();
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      initForm();
+    });
+  </script>
+</body>
+</html>
+

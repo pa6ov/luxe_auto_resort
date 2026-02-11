@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Автомобили - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html" class="active">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Нашите <span>автомобили</span></h1>
+      <p>Изберете от нашата колекция от премиум автомобили</p>
+    </div>
+  </section>
+
+  <section id="cars">
+    <div class="container">
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filters-grid">
+          <div class="form-group">
+            <label for="filterBrand">Марка</label>
+            <input type="text" id="filterBrand" placeholder="напр. Mercedes">
+          </div>
+          <div class="form-group">
+            <label for="filterType">Тип</label>
+            <select id="filterType">
+              <option value="">Всички типове</option>
+              <option value="sedan">Седан</option>
+              <option value="suv">SUV</option>
+              <option value="coupe">Купе</option>
+              <option value="minivan">Миниван</option>
+              <option value="sport">Спортен</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="filterMinPrice">Мин. цена</label>
+            <input type="number" id="filterMinPrice" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label for="filterMaxPrice">Макс. цена</label>
+            <input type="number" id="filterMaxPrice" placeholder="500">
+          </div>
+          <div class="form-group">
+            <label for="filterSort">Сортиране</label>
+            <select id="filterSort">
+              <option value="">По подразбиране</option>
+              <option value="price_asc">Цена (възходящо)</option>
+              <option value="price_desc">Цена (низходящо)</option>
+              <option value="year_desc">Година (нови първи)</option>
+              <option value="brand">Марка (А-Я)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="filterAvailable">Наличност</label>
+            <select id="filterAvailable">
+              <option value="true">Само налични</option>
+              <option value="">Всички</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <button class="btn btn-primary" onclick="applyFilters()" style="width:100%">Филтрирай</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cars Grid -->
+      <div id="carsGrid" class="car-grid">
+        <div class="loading">Зареждане на автомобили...</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <h3>Luxe Auto Resort</h3>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили.</p>
+        </div>
+        <div>
+          <h3>Бързи връзки</h3>
+          <ul>
+            <li><a href="index.html">Начало</a></li>
+            <li><a href="cars.html">Автомобили</a></li>
+            <li><a href="templates.html">Шаблони</a></li>
+            <li><a href="contacts.html">Контакти</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Контакти</h3>
+          <ul>
+            <li>📍 София, България</li>
+            <li>📞 +359 888 123 456</li>
+            <li>✉️ info@luxeauto.bg</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Get URL params and apply filters
+    function getFilters() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        brand: params.get('brand') || document.getElementById('filterBrand').value,
+        type: params.get('type') || document.getElementById('filterType').value,
+        min_price: params.get('min_price') || document.getElementById('filterMinPrice').value,
+        max_price: params.get('max_price') || document.getElementById('filterMaxPrice').value,
+        sort: params.get('sort') || document.getElementById('filterSort').value,
+        available: params.get('available') || document.getElementById('filterAvailable').value
+      };
+    }
+
+    function applyFilters() {
+      const filters = getFilters();
+      let url = 'cars.html?';
+      
+      if (filters.brand) url += `brand=${encodeURIComponent(filters.brand)}&`;
+      if (filters.type) url += `type=${filters.type}&`;
+      if (filters.min_price) url += `min_price=${filters.min_price}&`;
+      if (filters.max_price) url += `max_price=${filters.max_price}&`;
+      if (filters.sort) url += `sort=${filters.sort}&`;
+      if (filters.available) url += `available=${filters.available}`;
+      
+      window.location.href = url;
+    }
+
+    // Populate filter fields from URL
+    function populateFilters() {
+      const params = new URLSearchParams(window.location.search);
+      
+      if (params.has('brand')) document.getElementById('filterBrand').value = params.get('brand');
+      if (params.has('type')) document.getElementById('filterType').value = params.get('type');
+      if (params.has('min_price')) document.getElementById('filterMinPrice').value = params.get('min_price');
+      if (params.has('max_price')) document.getElementById('filterMaxPrice').value = params.get('max_price');
+      if (params.has('sort')) document.getElementById('filterSort').value = params.get('sort');
+      if (params.has('available')) document.getElementById('filterAvailable').value = params.get('available');
+    }
+
+    // Load cars
+    async function loadCars() {
+      const container = document.getElementById('carsGrid');
+      const filters = getFilters();
+      
+      let url = '/cars?';
+      if (filters.brand) url += `brand=${encodeURIComponent(filters.brand)}&`;
+      if (filters.type) url += `type=${filters.type}&`;
+      if (filters.min_price) url += `min_price=${filters.min_price}&`;
+      if (filters.max_price) url += `max_price=${filters.max_price}&`;
+      if (filters.sort) url += `sort=${filters.sort}&`;
+      if (filters.available) url += `available=${filters.available}`;
+      
+      try {
+        const cars = await LuxeAuto.api.get(url);
+        
+        if (cars.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1;">
+              <h3>Няма намерени автомобили</h3>
+              <p>Опитайте с различни филтри</p>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = cars.map(car => LuxeAuto.createCarCard(car)).join('');
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error" style="grid-column: 1/-1;">${error.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      populateFilters();
+      loadCars();
+    });
+  </script>
+</body>
+</html>
+

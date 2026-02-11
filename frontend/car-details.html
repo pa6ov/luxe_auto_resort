@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Детайли за автомобил - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Детайли за <span>автомобил</span></h1>
+    </div>
+  </section>
+
+  <section id="car-details">
+    <div class="container">
+      <div id="carDetail">
+        <div class="loading">Зареждане...</div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div>
+          <h3>Luxe Auto Resort</h3>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили.</p>
+        </div>
+        <div>
+          <h3>Бързи връзки</h3>
+          <ul>
+            <li><a href="index.html">Начало</a></li>
+            <li><a href="cars.html">Автомобили</a></li>
+            <li><a href="templates.html">Шаблони</a></li>
+            <li><a href="contacts.html">Контакти</a></li>
+          </ul>
+        </div>
+        <div>
+          <h3>Контакти</h3>
+          <ul>
+            <li>📍 София, България</li>
+            <li>📞 +359 888 123 456</li>
+            <li>✉️ info@luxeauto.bg</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const carId = urlParams.get('id');
+
+    async function loadCarDetails() {
+      const container = document.getElementById('carDetail');
+      
+      if (!carId) {
+        container.innerHTML = '<div class="alert alert-error">Не е посочен автомобил</div>';
+        return;
+      }
+      
+      try {
+        const car = await LuxeAuto.api.get(`/cars/${carId}`);
+        
+        const statusBadge = car.available 
+          ? '<span class="status status-approved">Наличен</span>'
+          : '<span class="status status-rejected">Не е наличен</span>';
+        
+        container.innerHTML = `
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
+            <div>
+              <img src="${car.image_url || 'https://via.placeholder.com/800x600?text=No+Image'}" 
+                   alt="${car.brand} ${car.model}" 
+                   style="width:100%; border-radius:8px; max-width:600px;">
+            </div>
+            <div>
+              <div style="margin-bottom:20px;">
+                ${statusBadge}
+              </div>
+              <h2 style="font-size:2rem; margin-bottom:10px;">${car.brand} <span style="color:var(--cta);">${car.model}</span></h2>
+              <p style="font-size:1.2rem; color:rgba(236,229,240,0.7); margin-bottom:20px;">${car.year} | ${car.color}</p>
+              
+              <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:15px; margin-bottom:25px;">
+                <div class="card">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Тип</p>
+                  <p style="font-size:1.1rem;">${ui.getCarTypeBg(car.type)} ${car.type}</p>
+                </div>
+                <div class="card">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Гориво</p>
+                  <p style="font-size:1.1rem;">⛽ ${car.fuel_type}</p>
+                </div>
+                <div class="card">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Скоростна кутия</p>
+                  <p style="font-size:1.1rem;">⚙️ ${car.transmission}</p>
+                </div>
+                <div class="card">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Места</p>
+                  <p style="font-size:1.1rem;">🪑 ${car.seats}</p>
+                </div>
+                <div class="card">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Пробег</p>
+                  <p style="font-size:1.1rem;">📏 ${car.mileage?.toLocaleString() || 0} км</p>
+                </div>
+                <div class="card">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Регистрация</p>
+                  <p style="font-size:1.1rem;">🔖 ${car.license_plate || 'Няма'}</p>
+                </div>
+              </div>
+              
+              ${car.description ? `
+                <div class="card" style="margin-bottom:25px;">
+                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6); margin-bottom:10px;">Описание</p>
+                  <p>${car.description}</p>
+                </div>
+              ` : ''}
+              
+              <div style="background:linear-gradient(135deg, rgba(75,136,162,0.2), rgba(233,168,21,0.1)); 
+                          padding:25px; border-radius:8px; text-align:center;">
+                <p style="font-size:1.2rem; margin-bottom:10px;">Цена на ден</p>
+                <p style="font-size:2.5rem; font-weight:bold; color:var(--cta);">${ui.formatPrice(car.price_per_day)}</p>
+              </div>
+              
+              <div style="margin-top:25px;">
+                ${car.available ? `
+                  <a href="create-request.html?car=${car.id}" class="btn btn-primary btn-lg" style="width:100%;">
+                    Наеми сега
+                  </a>
+                ` : `
+                  <div class="alert alert-warning">Този автомобил не е наличен в момента</div>
+                `}
+                <a href="cars.html" class="btn btn-outline" style="margin-top:10px; width:100%;">
+                  ← Обратно към автомобили
+                </a>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      loadCarDetails();
+    });
+  </script>
+</body>
+</html>
+

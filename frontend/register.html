@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Регистрация - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Създайте <span>профил</span></h1>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="auth-container">
+        <h1>Регистрация</h1>
+        <div id="message"></div>
+        <form id="registerForm">
+          <div class="form-group">
+            <label for="first_name">Име</label>
+            <input type="text" id="first_name" name="first_name" required placeholder="Вашето име">
+          </div>
+          <div class="form-group">
+            <label for="last_name">Фамилия</label>
+            <input type="text" id="last_name" name="last_name" required placeholder="Вашата фамилия">
+          </div>
+          <div class="form-group">
+            <label for="email">Имейл</label>
+            <input type="email" id="email" name="email" required placeholder="your@email.com">
+          </div>
+          <div class="form-group">
+            <label for="phone">Телефон</label>
+            <input type="tel" id="phone" name="phone" placeholder="+359 888 123 456">
+          </div>
+          <div class="form-group">
+            <label for="password">Парола</label>
+            <input type="password" id="password" name="password" required minlength="6" placeholder="Мин. 6 символа">
+          </div>
+          <div class="form-group">
+            <label for="confirm_password">Потвърди парола</label>
+            <input type="password" id="confirm_password" name="confirm_password" required placeholder="Повторете паролата">
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Регистрация</button>
+        </form>
+        <div class="auth-footer">
+          <p>Вече имате профил? <a href="login.html">Вход</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Redirect if already logged in
+    if (LuxeAuto.auth.isLoggedIn()) {
+      window.location.href = 'index.html';
+    }
+
+    // Handle registration
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageDiv = document.getElementById('message');
+      
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
+      
+      if (password !== confirmPassword) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Паролите не съвпадат</div>';
+        return;
+      }
+      
+      if (password.length < 6) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Паролата трябва да е поне 6 символа</div>';
+        return;
+      }
+      
+      messageDiv.innerHTML = '<div class="loading">Регистрация...</div>';
+      
+      try {
+        await LuxeAuto.api.post('/auth/register', {
+          first_name: document.getElementById('first_name').value,
+          last_name: document.getElementById('last_name').value,
+          email: document.getElementById('email').value,
+          phone: document.getElementById('phone').value,
+          password: password
+        });
+        
+        messageDiv.innerHTML = '<div class="alert alert-success">Успешна регистрация! Пренасочване към вход...</div>';
+        
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 1500);
+      } catch (error) {
+        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    });
+  </script>
+</body>
+</html>
+

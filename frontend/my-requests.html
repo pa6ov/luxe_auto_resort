@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Моите заявки - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Моите <span>заявки</span></h1>
+      <p>Преглед на всички ваши резервации</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div id="requestsList">
+        <div class="loading">Зареждане на заявки...</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="container">
+>
+    <div      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Check auth
+    if (!LuxeAuto.auth.isLoggedIn()) {
+      window.location.href = 'login.html?redirect=my-requests.html';
+    }
+
+    async function loadRequests() {
+      const container = document.getElementById('requestsList');
+      
+      try {
+        const requests = await LuxeAuto.api.get('/requests/my');
+        
+        if (requests.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <h3>Нямате заявки</h3>
+              <p>Все още не сте направили резервация</p>
+              <a href="cars.html" class="btn btn-primary" style="margin-top:20px;">Разгледайте автомобили</a>
+            </div>
+          `;
+          return;
+        }
+        
+        container.innerHTML = `
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Автомобили</th>
+                  <th>Период</th>
+                  <th>Цена</th>
+                  <th>Статус</th>
+                  <th>Дата</th>
+                  <th>Действия</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${requests.map(r => `
+                  <tr>
+                    <td>#${r.id}</td>
+                    <td>
+                      ${r.cars?.map(c => `${c.brand} ${c.model}`).join(', ') || '-'}
+                    </td>
+                    <td>
+                      ${ui.formatDate(r.start_date)} - ${ui.formatDate(r.end_date)}
+                    </td>
+                    <td>${ui.formatPrice(r.total_price)}</td>
+                    <td>${ui.getStatusBadge(r.status)}</td>
+                    <td>${ui.formatDate(r.created_at)}</td>
+                    <td>
+                      ${r.status === 'pending' ? `
+                        <button class="btn btn-sm btn-danger" onclick="cancelRequest(${r.id})">
+                          Отмени
+                        </button>
+                      ` : '-'}
+                    </td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } catch (error) {
+        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    async function cancelRequest(id) {
+      if (!confirm('Сигурни ли сте, че искате да отмените тази заявка?')) return;
+      
+      try {
+        await LuxeAuto.api.post(`/requests/${id}/cancel`);
+        loadRequests();
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      loadRequests();
+    });
+  </script>
+</body>
+</html>
+
