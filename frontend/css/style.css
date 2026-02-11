@@ -1,10 +1,10 @@
 /* Luxe Auto Resort - CSS Styles */
 
-/* CSS Variables */
+/* CSS Variables - Original Palette with Enhanced Hover */
 :root {
   --bg: #171614;
   --accent: #4B88A2;
-  --card: #ECE5F0;
+  --card: #252525;
   --cta: #E98A15;
   --text-light: #ECE5F0;
   --text-dark: #171614;
@@ -14,6 +14,12 @@
   --border-radius: 8px;
   --transition: all 0.3s ease;
   --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+
+  /* Enhanced Hover Colors */
+  --accent-hover: #5fa4c7;
+  --cta-hover: #f5a03d;
+  --card-hover: #2d2d2d;
+  --link-hover: #7ec8e3;
 }
 
 /* Reset & Base */
@@ -38,7 +44,7 @@ a {
 }
 
 a:hover {
-  color: var(--cta);
+  color: var(--link-hover);
 }
 
 /* Layout */
@@ -91,8 +97,8 @@ nav a {
 
 nav a:hover,
 nav a.active {
-  color: var(--cta);
-  background-color: rgba(233, 168, 21, 0.1);
+  color: var(--cta-hover);
+  background-color: rgba(249, 160, 61, 0.15);
 }
 
 nav a.btn {
@@ -101,7 +107,8 @@ nav a.btn {
 }
 
 nav a.btn:hover {
-  background-color: #d4910f;
+  background-color: var(--cta-hover);
+  transform: translateY(-2px);
 }
 
 /* Mobile Menu */
@@ -162,8 +169,9 @@ nav a.btn:hover {
 }
 
 .btn-primary:hover {
-  background-color: #d4910f;
+  background-color: var(--cta-hover);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(233, 138, 21, 0.4);
 }
 
 .btn-secondary {
@@ -172,7 +180,9 @@ nav a.btn:hover {
 }
 
 .btn-secondary:hover {
-  background-color: #3d7a8c;
+  background-color: var(--accent-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(75, 136, 162, 0.4);
 }
 
 .btn-danger {
@@ -180,9 +190,19 @@ nav a.btn:hover {
   color: white;
 }
 
+.btn-danger:hover {
+  background-color: #c82333;
+  transform: translateY(-2px);
+}
+
 .btn-success {
   background-color: var(--success);
   color: white;
+}
+
+.btn-success:hover {
+  background-color: #218838;
+  transform: translateY(-2px);
 }
 
 .btn-outline {
@@ -194,6 +214,7 @@ nav a.btn:hover {
 .btn-outline:hover {
   background-color: var(--cta);
   color: var(--text-dark);
+  transform: translateY(-2px);
 }
 
 .btn-sm {
@@ -263,7 +284,7 @@ nav a.btn:hover {
 
 /* Cards */
 .card {
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   border: 1px solid rgba(75, 136, 162, 0.2);
   border-radius: var(--border-radius);
   padding: 25px;
@@ -273,7 +294,8 @@ nav a.btn:hover {
 .card:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow);
-  border-color: var(--accent);
+  border-color: var(--accent-hover);
+  background-color: var(--card-hover);
 }
 
 .card-header {
@@ -301,7 +323,7 @@ nav a.btn:hover {
 }
 
 .car-card {
-  background-color: rgba(236, 229, 240, 0.08);
+  background-color: var(--card);
   border-radius: var(--border-radius);
   overflow: hidden;
   transition: var(--transition);
@@ -311,7 +333,8 @@ nav a.btn:hover {
 .car-card:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow);
-  border-color: var(--accent);
+  border-color: var(--accent-hover);
+  background-color: var(--card-hover);
 }
 
 .car-image {
@@ -384,7 +407,8 @@ nav a.btn:hover {
 .template-card:hover {
   transform: translateY(-5px);
   box-shadow: var(--shadow);
-  border-color: var(--cta);
+  border-color: var(--cta-hover);
+  background: linear-gradient(135deg, rgba(95, 164, 199, 0.3), rgba(249, 160, 61, 0.15));
 }
 
 .template-icon {
@@ -415,6 +439,10 @@ nav a.btn:hover {
   margin-bottom: 15px;
 }
 
+.template-discount:hover {
+  background-color: var(--cta-hover);
+}
+
 .template-description {
   color: rgba(236, 229, 240, 0.8);
   font-size: 0.95rem;
@@ -424,7 +452,7 @@ nav a.btn:hover {
 /* Tables */
 .table-container {
   overflow-x: auto;
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   border-radius: var(--border-radius);
   padding: 20px;
 }
@@ -487,7 +515,7 @@ tr:hover {
 
 /* Filters Section */
 .filters {
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   padding: 25px;
   border-radius: var(--border-radius);
   margin-bottom: 30px;
@@ -506,11 +534,17 @@ tr:hover {
 }
 
 .comment {
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   padding: 20px;
   border-radius: var(--border-radius);
   margin-bottom: 15px;
   border-left: 4px solid var(--accent);
+  transition: var(--transition);
+}
+
+.comment:hover {
+  border-left-color: var(--accent-hover);
+  background-color: var(--card-hover);
 }
 
 .comment-header {
@@ -541,11 +575,17 @@ tr:hover {
 
 /* Contact Messages */
 .message {
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   padding: 20px;
   border-radius: var(--border-radius);
   margin-bottom: 15px;
   border-left: 4px solid var(--cta);
+  transition: var(--transition);
+}
+
+.message:hover {
+  border-left-color: var(--cta-hover);
+  background-color: var(--card-hover);
 }
 
 .message.unread {
@@ -617,7 +657,7 @@ footer a {
 }
 
 footer a:hover {
-  color: var(--cta);
+  color: var(--cta-hover);
 }
 
 .footer-bottom {
@@ -633,7 +673,7 @@ footer a:hover {
   max-width: 450px;
   margin: 60px auto;
   padding: 40px;
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   border-radius: var(--border-radius);
   border: 1px solid rgba(75, 136, 162, 0.2);
 }
@@ -664,6 +704,15 @@ footer a:hover {
   padding: 25px;
   border-radius: var(--border-radius);
   text-align: center;
+  transition: var(--transition);
+  border: 1px solid rgba(75, 136, 162, 0.3);
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow);
+  border-color: var(--cta-hover);
+  background: linear-gradient(135deg, rgba(95, 164, 199, 0.4), rgba(249, 160, 61, 0.15));
 }
 
 .dashboard-card h3 {
@@ -752,7 +801,7 @@ footer a:hover {
 
 .rating span.active,
 .rating span:hover {
-  color: var(--cta);
+  color: var(--cta-hover);
 }
 
 /* Modal */
@@ -799,6 +848,11 @@ footer a:hover {
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--text-light);
+  transition: var(--transition);
+}
+
+.modal-close:hover {
+  color: var(--cta-hover);
 }
 
 /* Checkbox/Radio for car selection */
@@ -807,25 +861,27 @@ footer a:hover {
   align-items: center;
   gap: 10px;
   padding: 10px;
-  background-color: rgba(236, 229, 240, 0.05);
+  background-color: var(--card);
   border-radius: var(--border-radius);
   cursor: pointer;
   transition: var(--transition);
 }
 
 .car-checkbox:hover {
-  background-color: rgba(75, 136, 162, 0.1);
+  background-color: rgba(75, 136, 162, 0.15);
+  border-color: var(--accent-hover);
 }
 
 .car-checkbox input {
   width: 20px;
   height: 20px;
   cursor: pointer;
+  accent-color: var(--accent);
 }
 
 .car-checkbox.selected {
   background-color: rgba(75, 136, 162, 0.2);
-  border: 2px solid var(--accent);
+  border: 2px solid var(--accent-hover);
 }
 
 /* Responsive */
@@ -833,11 +889,11 @@ footer a:hover {
   .hero h1 {
     font-size: 2rem;
   }
-  
+
   .mobile-menu-btn {
     display: block;
   }
-  
+
   nav ul {
     display: none;
     position: absolute;
@@ -850,27 +906,27 @@ footer a:hover {
     gap: 10px;
     border-bottom: 2px solid var(--accent);
   }
-  
+
   nav ul.active {
     display: flex;
   }
-  
+
   .filters-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .car-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .table-container {
     font-size: 0.9rem;
   }
-  
+
   th, td {
     padding: 8px 10px;
   }
-  
+
   .auth-container {
     margin: 20px;
     padding: 25px;
@@ -922,7 +978,7 @@ footer a:hover {
   color: var(--cta);
   text-align: right;
   padding: 20px;
-  background-color: rgba(75, 136, 162, 0.1);
+  background-color: var(--card);
   border-radius: var(--border-radius);
   margin-top: 20px;
 }
