@@ -97,13 +97,12 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
+const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, HOST, () => {
-  console.log(`Luxe Auto Resort Server running on http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}`);
-  console.log(`LAN access: http://${getLocalIP()}:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
 });
+
 
 function getLocalIP() {
   const { networkInterfaces } = require('os');
