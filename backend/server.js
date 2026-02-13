@@ -93,8 +93,8 @@ app.use((err, req, res, next) => {
 });
 
 // Serve index.html for all non-API routes (SPA support)
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+app.get('/', (req, res) => {
+  res.send('API is running');
 });
 
 const PORT = process.env.PORT || 8080;
