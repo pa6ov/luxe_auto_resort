@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const pool = require('./config/database');
+const readline = require('readline');
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -97,13 +98,6 @@ app.get('/', (req, res) => {
   res.send('API is running');
 });
 
-const PORT = process.env.PORT || 8080;
-
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
-
-
 function getLocalIP() {
   const { networkInterfaces } = require('os');
   const nets = networkInterfaces();
@@ -116,6 +110,37 @@ function getLocalIP() {
   }
   return 'localhost';
 }
+
+const PORT = 3000;
+const localIP = getLocalIP();
+
+const server = app.listen(PORT, "0.0.0.0", () => {
+  console.log('\n🚀 Server running on port ' + PORT);
+  console.log('\n📱 Open in browser:');
+  console.log(`   Local:   http://localhost:${PORT}`);
+  console.log(`   Network: http://${localIP}:${PORT}`);
+  console.log('\n⌨️  Keyboard shortcuts:');
+  console.log('   r - Restart server');
+  console.log('   x - Exit\n');
+  
+  // Enable keyboard input
+  readline.emitKeypressEvents(process.stdin);
+  process.stdin.setRawMode(true);
+  
+  process.stdin.on('keypress', (str, key) => {
+    if (key.name === 'r') {
+      console.log('\n🔄 Restarting server...');
+      server.close(() => {
+        process.exit(0);
+      });
+    } else if (key.name === 'x' || key.ctrl === 'c') {
+      console.log('\n👋 Exiting...');
+      server.close(() => {
+        process.exit(0);
+      });
+    }
+  });
+});
 
 module.exports = app;
 

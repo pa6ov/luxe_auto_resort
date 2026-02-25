@@ -77,7 +77,7 @@ router.get('/:id', async (req, res) => {
 // Създаване на автомобил (админ)
 router.post('/', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { brand, model, year, color, license_plate, price_per_day, type, seats, 
+    const { brand, model, year, license_plate, price_per_day, type, seats, 
             transmission, fuel_type, mileage, image_url, description, available } = req.body;
 
     // Валидация
@@ -86,10 +86,10 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
     }
 
     const [result] = await pool.query(
-      `INSERT INTO cars (brand, model, year, color, license_plate, price_per_day, type, seats, 
+      `INSERT INTO cars (brand, model, year, license_plate, price_per_day, type, seats, 
                          transmission, fuel_type, mileage, image_url, description, available) 
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [brand, model, year, color || null, license_plate || null, price_per_day, 
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [brand, model, year, license_plate || null, price_per_day, 
        type || 'sedan', seats || 5, transmission || 'automatic', fuel_type || 'petrol',
        mileage || 0, image_url || null, description || null, available !== false]
     );
@@ -107,14 +107,14 @@ router.post('/', requireAuth, requireAdmin, async (req, res) => {
 // Редактиране на автомобил (админ)
 router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
-    const { brand, model, year, color, license_plate, price_per_day, type, seats, 
+    const { brand, model, year, license_plate, price_per_day, type, seats, 
             transmission, fuel_type, mileage, image_url, description, available } = req.body;
 
     const [result] = await pool.query(
-      `UPDATE cars SET brand=?, model=?, year=?, color=?, license_plate=?, price_per_day=?, 
+      `UPDATE cars SET brand=?, model=?, year=?, license_plate=?, price_per_day=?, 
                          type=?, seats=?, transmission=?, fuel_type=?, mileage=?, image_url=?, 
                          description=?, available=? WHERE id=?`,
-      [brand, model, year, color, license_plate, price_per_day, type, seats,
+      [brand, model, year, license_plate, price_per_day, type, seats,
        transmission, fuel_type, mileage, image_url, description, available, req.params.id]
     );
 

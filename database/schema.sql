@@ -24,7 +24,6 @@ CREATE TABLE cars (
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
     year INT NOT NULL,
-    color VARCHAR(50),
     license_plate VARCHAR(20) UNIQUE,
     price_per_day DECIMAL(10, 2) NOT NULL,
     type ENUM('sedan', 'suv', ' coupe', 'minivan', 'truck', 'sport') DEFAULT 'sedan',
