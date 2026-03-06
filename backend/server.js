@@ -93,9 +93,9 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Възникна грешка на сървъра' });
 });
 
-// Serve index.html for all non-API routes (SPA support)
+// Serve index.html at root
 app.get('/', (req, res) => {
-  res.send('API is running');
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
 function getLocalIP() {

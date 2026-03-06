@@ -3,15 +3,15 @@ USE luxe_auto_resort;
 
 -- Admin акаунт (email: admin@luxeauto.bg, password: admin123)
 INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES 
-('admin@luxeauto.bg', '$2b$10$rQZ5Z5Z5Z5Z5Z5Z5Z5Z5Z.5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5', 'Админ', 'Админов', '+359888111111', 'admin');
+('admin@luxeauto.bg', '$2b$10$t8yhxLNYXGOkujUAjiSU..u.u80tHwiLSWSgn6IhvscfXbeUy6/1S', 'Админ', 'Админов', '+359888111111', 'admin');
 
 -- Клиент 1 (email: ivan@abv.bg, password: ivan123)
 INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES 
-('ivan@abv.bg', '$2b$10$iV5V5V5V5V5V5V5V5V5V5.5V5V5V5V5V5V5V5V5V5V5V5V5V', 'Иван', 'Иванов', '+359888222222', 'client');
+('ivan@abv.bg', '$2b$10$Ia3O2Ltiq24Rzn3XSKQDlOhWYszJnzLAHb0GdfiPzrO1PsWI/ceDe', 'Иван', 'Иванов', '+359888222222', 'client');
 
 -- Клиент 2 (email: mariya@abv.bg, password: mariya123)
 INSERT INTO users (email, password, first_name, last_name, phone, role) VALUES 
-('maria@abv.bg', '$2b$10$mW5W5W5W5W5W5W5W5W5W5.5W5W5W5W5W5W5W5W5W5W5W5W5W', 'Мария', 'Петрова', '+359888333333', 'client');
+('maria@abv.bg', '$2b$10$YoluDOIBxMR95VOhrgDdGeH7hlPYVzOdgVRasrGCZWCk1vrwkJ5oS', 'Мария', 'Петрова', '+359888333333', 'client');
 
 -- Автомобили - Premium Fleet с детайлна информация и цени в евро
 INSERT INTO cars (brand, model, year, color, license_plate, price_per_day, type, seats, transmission, fuel_type, mileage, image_url, description, available) VALUES
@@ -26,7 +26,7 @@ INSERT INTO cars (brand, model, year, color, license_plate, price_per_day, type,
 
 -- Compact Class
 ('VW', 'Passat', 2010, 'Тъмно син', 'B8901HH', 55.00, 'sedan', 5, 'automatic', 'diesel', 160000, 'images/11747168559650588_94ba9fe5.webp', 'Бизнес клас седан с луксозен интериор. Просторен салон, кожени седалки и модерна мултимедия.', TRUE),
-('VW', 'Golf', 2015, 'Бял', 'B9012II', 55.00, 'sedan', 5, 'automatic', 'diesel', 146000, 'images/11763066054524690_7f8fbe08.webp', 'Седмо поколение Golf с TDI двигател. Спортен дизайн и висока икономичност.', TRUE),
+('VW', 'Golf', 2015, 'Бял', 'B9012II', 55.00, 'sedan', 5, 'automatic', 'diesel', 146000, 'images/11763066054524690_7f8fbe08.webp', 'Седмо поколение Golf с TDI двигател. Спортен дизайн и висoka икономичност.', TRUE),
 ('VW', 'Golf', 2017, 'Черен', 'B0123JJ', 58.00, 'sedan', 5, 'automatic', 'diesel', 201464, 'images/11760546872307924_e2403508.webp', 'Най-новото поколение Golf с иновативни технологии. Асистенти за безопасност и комфорт.', TRUE),
 ('Toyota', 'Auris', 2016, 'Бял', 'B1234KK', 70.00, 'sedan', 5, 'automatic', 'hybrid', 132000, 'images/11747163949178061_6cc7d5ac.webp', 'Хибриден автомобил с изключителна икономичност. Перфектен за екологично съзнателни шофьори.', TRUE),
 ('Toyota', 'Yaris', 2015, 'Червено', 'B2345LL', 60.00, 'sedan', 5, 'automatic', 'petrol', 189000, 'images/11770058354257611_1dfe05a7.webp', 'Компактен хечбек с богат асортимент от функции. Лесен за паркиране в града.', TRUE),
@@ -47,7 +47,7 @@ INSERT INTO cars (brand, model, year, color, license_plate, price_per_day, type,
 ('Mercedes-Benz', 'Viano', 2008, 'Сребърен', 'B5678YY', 70.00, 'minivan', 7, 'automatic', 'petrol', 250000, 'images/11764744258581642_e29b89fd.webp', 'Просторен ван за семейни пътувания. 7 места и багажно пространство за всички багажи.', TRUE),
 
 -- SUV & Crossover
-('Toyota', 'Land Cruiser', 2025, 'Бял', 'B6789ZZ', 220.00, 'suv', 5, 'automatic', 'petrol', 154000, 'images/21733497466542942_f44a8d64.webp', 'Легендарният офроудър. Непревземаем в терен. Пълен задвижване и田устойчивост.', TRUE),
+('Toyota', 'Land Cruiser', 2025, 'Бял', 'B6789ZZ', 220.00, 'suv', 5, 'automatic', 'petrol', 154000, 'images/21733497466542942_f44a8d64.webp', 'Легендарният офроудър. Непревземаем в терен. Пълен задвижване и устойчивост.', TRUE),
 ('BMW', 'X3', 2025, 'Черен', 'B7890AAA', 130.00, 'suv', 5, 'automatic', 'petrol', 228000, 'images/21747166135878644_eb5d6470.webp', 'Компактен SUV с премиум качество. Спортно пътно поведение и просторен интериор.', TRUE),
 ('BMW', 'X5', 2025, 'Син', 'B8901BBB', 150.00, 'suv', 5, 'automatic', 'petrol', 150000, 'images/21755199629110726_aa694bf9.webp', 'Луксозен SUV с три реда седалки. XDrive задвижване и максимален комфорт.', TRUE),
 ('BMW', 'X5', 2025, 'Бял', 'B9012CCC', 145.00, 'suv', 7, 'automatic', 'petrol', 211000, 'images/21756360851826701_d3e16a8c.webp', 'Просторен семей SUV с 7 места. Идеален за дълги пътувания с цялото семейство.', TRUE),
@@ -65,7 +65,7 @@ INSERT INTO cars (brand, model, year, color, license_plate, price_per_day, type,
 ('Fiat', 'Scudo', 2006, 'Бял', 'B9012MMM', 40.00, 'minivan', 6, 'automatic', 'petrol', 200000, 'images/11745326028716829_fd8acb33.webp', 'Товарен ван с 6 места. Идеален за транспорт на екип или оборудване.', TRUE),
 ('Citroen', 'Grand C4 Picasso', 2011, 'Сив', 'B0123NNN', 45.00, 'minivan', 7, 'automatic', 'diesel', 158000, 'images/11760895872012717_d967966c.webp', 'Семеен ван с 7 места. Панорамен покрив и развлекателна система за деца.', TRUE),
 ('Citroen', 'Grand C4', 2011, 'Бял', 'B1234OOO', 40.00, 'minivan', 7, 'automatic', 'electric', 183000, 'images/11769711139006778_37af15d7.webp', 'Електрическа версия на семейния ван. 0 вредни емисии и тихо шофиране.', TRUE),
-('Toyota', 'Verso', 2010, 'Син', 'B2345PPP', 48.00, 'minivan', 5, 'automatic', 'diesel', 217000, 'images/11765434610460251_39b2d5a2.webp', 'Семеерен автомобил с灵活 layout. Сгъваеми седалки за повече багаж.', TRUE),
+('Toyota', 'Verso', 2010, 'Син', 'B2345PPP', 48.00, 'minivan', 5, 'automatic', 'diesel', 217000, 'images/11765434610460251_39b2d5a2.webp', 'Семеен автомобил с гъвкав layout. Сгъваеми седалки за повече багаж.', TRUE),
 ('Peugeot', 'Partner', 2018, 'Бял', 'B3456QQQ', 55.00, 'minivan', 5, 'automatic', 'diesel', 194000, 'images/11747506247577852_c194dfe1.webp', 'Компактен ван с нисък разход. Перфектен за градска дистрибуция.', TRUE),
 ('Renault', 'Kangoo', 2016, 'Зелен', 'B4567RRR', 50.00, 'minivan', 5, 'automatic', 'diesel', 47000, 'images/11764273779407582_c115b495.webp', 'Компактен товарен ван с нисък пробег. Идеален за бизнес или семеен транспорт.', TRUE),
 
