@@ -1,6 +1,6 @@
 -- Luxe Auto Resort Database Schema
 -- Създаване на база данни
-CREATE DATABASE IF NOT EXISTS luxe_auto_resort;
+CREATE DATABASE IF NOT EXISTS luxe_auto_resort CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE luxe_auto_resort;
 
 -- Таблица потребители
@@ -16,7 +16,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_email (email),
     INDEX idx_role (role)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица автомобили
 CREATE TABLE cars (
@@ -24,9 +24,10 @@ CREATE TABLE cars (
     brand VARCHAR(100) NOT NULL,
     model VARCHAR(100) NOT NULL,
     year INT NOT NULL,
+    color VARCHAR(50),
     license_plate VARCHAR(20) UNIQUE,
     price_per_day DECIMAL(10, 2) NOT NULL,
-    type ENUM('sedan', 'suv', ' coupe', 'minivan', 'truck', 'sport') DEFAULT 'sedan',
+    type ENUM('sedan', 'suv', 'coupe', 'minivan', 'truck', 'sport') DEFAULT 'sedan',
     seats INT DEFAULT 5,
     transmission ENUM('manual', 'automatic') DEFAULT 'automatic',
     fuel_type ENUM('petrol', 'diesel', 'electric', 'hybrid') DEFAULT 'petrol',
@@ -41,7 +42,7 @@ CREATE TABLE cars (
     INDEX idx_price (price_per_day),
     INDEX idx_available (available),
     INDEX idx_type (type)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица шаблони/пакети
 CREATE TABLE templates (
@@ -54,7 +55,7 @@ CREATE TABLE templates (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_active (is_active)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица опции/екстри за шаблони
 CREATE TABLE template_options (
@@ -65,7 +66,7 @@ CREATE TABLE template_options (
     is_included BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE,
     INDEX idx_template (template_id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица заявки за наем
 CREATE TABLE rental_requests (
@@ -85,7 +86,7 @@ CREATE TABLE rental_requests (
     INDEX idx_status (status),
     INDEX idx_dates (start_date, end_date),
     INDEX idx_created (created_at)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица автомобили в заявка (много към много)
 CREATE TABLE request_cars (
@@ -97,7 +98,7 @@ CREATE TABLE request_cars (
     UNIQUE KEY unique_request_car (request_id, car_id),
     INDEX idx_request (request_id),
     INDEX idx_car (car_id)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица контактни съобщения
 CREATE TABLE contact_messages (
@@ -110,7 +111,7 @@ CREATE TABLE contact_messages (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_read (is_read),
     INDEX idx_created (created_at)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица коментари за платформата
 CREATE TABLE platform_comments (
@@ -124,7 +125,7 @@ CREATE TABLE platform_comments (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_user (user_id),
     INDEX idx_status (status)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Таблица коментари за шаблони
 CREATE TABLE template_comments (
@@ -139,5 +140,5 @@ CREATE TABLE template_comments (
     FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE CASCADE,
     INDEX idx_template (template_id),
     INDEX idx_status (status)
-);
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

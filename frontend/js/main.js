@@ -4,7 +4,7 @@
 const API_BASE = (() => {
   const hostname = window.location.hostname;
   const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1';
-  const port = isLocalhost ? '8080' : window.location.port || '8080';
+  const port = isLocalhost ? '3000' : window.location.port || '3000';
   return `http://${hostname}:${port}/api`;
 })();
 
