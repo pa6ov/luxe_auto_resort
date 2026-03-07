@@ -34,7 +34,18 @@ const auth = {
   }
 };
 
-// API Helper with Error Handling
+// Error codes for specific handling
+const ErrorCodes = {
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+  EMAIL_ALREADY_EXISTS: 'EMAIL_ALREADY_EXISTS',
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  TOKEN_INVALID: 'TOKEN_INVALID',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  FORBIDDEN: 'FORBIDDEN',
+  NOT_FOUND: 'NOT_FOUND'
+};
+
+// API Helper with Enhanced Error Handling
 const api = {
   async request(endpoint, options = {}) {
     const headers = {
@@ -64,21 +75,55 @@ const api = {
       const data = await response.json();
       
       if (!response.ok) {
+        // Handle new error format with error codes
+        const errorInfo = data.error || { message: data.error || 'Възникна грешка' };
+        
         // Handle specific error codes
+        if (errorInfo.code === ErrorCodes.TOKEN_EXPIRED || errorInfo.code === ErrorCodes.TOKEN_INVALID) {
+          auth.logout();
+          throw new Error('Сесията ви е изтекла. Моля, влезте отново.');
+        }
+        
         if (response.status === 401) {
           auth.logout();
-          throw new Error('Моля, влезте отново');
+          throw new Error(errorInfo.message || 'Моля, влезте отново');
         }
-        if (response.status === 403) {
-          throw new Error('Нямате права за това действие');
+        
+        if (response.status === 403 || errorInfo.code === ErrorCodes.FORBIDDEN) {
+          throw new Error(errorInfo.message || 'Нямате права за това действие');
         }
-        if (response.status === 404) {
-          throw new Error('Ресурсът не е намерен');
+        
+        if (response.status === 404 || errorInfo.code === ErrorCodes.NOT_FOUND) {
+          throw new Error(errorInfo.message || 'Ресурсът не е намерен');
         }
+        
         if (response.status >= 500) {
           throw new Error('Грешка на сървъра. Моля, опитайте по-късно');
         }
-        throw new Error(data.error || 'Възникна грешка');
+        
+        // Handle validation errors with details
+        if (errorInfo.details && Array.isArray(errorInfo.details)) {
+          const validationErrors = errorInfo.details.map(e => e.message).join(', ');
+          throw new Error(`${errorInfo.message}: ${validationErrors}`);
+        }
+        
+        throw new Error(errorInfo.message || 'Възникна грешка');
+      }
+      
+      // Return data with success flag check
+      if (data.success === false) {
+        const errorInfo = data.error || { message: 'Възникна грешка' };
+        if (errorInfo.details && Array.isArray(errorInfo.details)) {
+          const validationErrors = errorInfo.details.map(e => e.message).join(', ');
+          throw new Error(`${errorInfo.message}: ${validationErrors}`);
+        }
+        throw new Error(errorInfo.message || 'Възникна грешка');
+      }
+      
+      // Handle new response format with data wrapper - return the data directly
+      // for backward compatibility with existing frontend code
+      if (data.success === true && data.data !== undefined) {
+        return data.data;
       }
       
       return data;
@@ -190,6 +235,35 @@ const ui = {
     }
     html += '</div>';
     return html;
+  },
+  
+  // Show field-specific validation errors
+  showFieldErrors(formElement, errors) {
+    // Clear all previous error messages
+    formElement.querySelectorAll('.field-error').forEach(el => el.remove());
+    formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    
+    if (!errors || !Array.isArray(errors)) return;
+    
+    errors.forEach(error => {
+      const field = formElement.querySelector(`[name="${error.field}"]`);
+      if (field) {
+        field.classList.add('is-invalid');
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'field-error';
+        errorDiv.style.color = '#dc3545';
+        errorDiv.style.fontSize = '0.875em';
+        errorDiv.style.marginTop = '4px';
+        errorDiv.textContent = error.message;
+        field.parentNode.appendChild(errorDiv);
+      }
+    });
+  },
+  
+  // Clear field-specific validation errors
+  clearFieldErrors(formElement) {
+    formElement.querySelectorAll('.field-error').forEach(el => el.remove());
+    formElement.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
   }
 };
 
@@ -373,4 +447,3 @@ window.LuxeAuto = {
   createTemplateCard,
   createCommentHTML
 };
-

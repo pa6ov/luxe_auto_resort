@@ -13,6 +13,9 @@ const costsRoutes = require('./routes/costs');
 const contactsRoutes = require('./routes/contacts');
 const commentsRoutes = require('./routes/comments');
 
+// Import error handling utilities
+const { errorHandler, notFoundHandler } = require('./utils/errors');
+
 const app = express();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -72,31 +75,42 @@ app.get('/api/admin/dashboard', require('./middleware/auth').requireAuth, requir
     `);
 
     res.json({
+      success: true,
       status_counts: statusCounts,
       top_cars: topCars,
       total_stats: totalStats[0]
     });
   } catch (error) {
     console.error('Dashboard error:', error);
-    res.status(500).json({ error: 'Грешка при зареждане на dashboard' });
+    res.status(500).json({ 
+      success: false,
+      error: { 
+        message: 'Грешка при зареждане на dashboard', 
+        code: 'DASHBOARD_ERROR' 
+      } 
+    });
   }
 });
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Възникна грешка на сървъра' });
+  res.json({ 
+    success: true,
+    status: 'ok', 
+    timestamp: new Date().toISOString() 
+  });
 });
 
 // Serve index.html at root
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
+
+// 404 handler for undefined routes
+app.use(notFoundHandler);
+
+// Centralized error handler
+app.use(errorHandler);
 
 function getLocalIP() {
   const { networkInterfaces } = require('os');

@@ -1,173 +1,280 @@
 const express = require('express');
 const pool = require('../config/database');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
+const { asyncHandler, ErrorCodes } = require('../utils/errors');
 
 const router = express.Router();
 
-// Коментари за платформата
+// Helper to validate comment input
+const validateCommentInput = (data) => {
+  const errors = [];
+  
+  // Content validation
+  if (!data.content) {
+    errors.push({ field: 'content', message: 'Съдържанието на коментара е задължително' });
+  } else if (data.content.length < 3) {
+    errors.push({ field: 'content', message: 'Коментарът трябва да е поне 3 символа' });
+  } else if (data.content.length > 2000) {
+    errors.push({ field: 'content', message: 'Коментарът не може да надвишава 2000 символа' });
+  }
+  
+  // Rating validation
+  if (data.rating !== undefined && data.rating !== null) {
+    const rating = parseInt(data.rating);
+    if (isNaN(rating) || rating < 1 || rating > 5) {
+      errors.push({ field: 'rating', message: 'Рейтингът трябва да е между 1 и 5' });
+    }
+  }
+  
+  return errors;
+};
 
 // Всички одобрени коментари (публичен)
-router.get('/platform', async (req, res) => {
-  try {
-    const [comments] = await pool.query(
-      `SELECT pc.*, u.first_name, u.last_name 
-       FROM platform_comments pc 
-       LEFT JOIN users u ON pc.user_id = u.id 
-       WHERE pc.status = 'approved'
-       ORDER BY pc.created_at DESC`
-    );
-    res.json(comments);
-  } catch (error) {
-    console.error('Get platform comments error:', error);
-    res.status(500).json({ error: 'Грешка при извличане на коментари' });
-  }
-});
+router.get('/platform', asyncHandler(async (req, res) => {
+  const [comments] = await pool.query(
+    `SELECT pc.*, u.first_name, u.last_name 
+     FROM platform_comments pc 
+     LEFT JOIN users u ON pc.user_id = u.id 
+     WHERE pc.status = 'approved'
+     ORDER BY pc.created_at DESC`
+  );
+  
+  res.json({
+    success: true,
+    data: comments,
+    count: comments.length
+  });
+}));
 
 // Добавяне на коментар за платформата
-router.post('/platform', requireAuth, async (req, res) => {
-  try {
-    const { content, rating } = req.body;
+router.post('/platform', requireAuth, asyncHandler(async (req, res) => {
+  const { content, rating } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ error: 'Съдържанието на коментара е задължително' });
-    }
-
-    if (rating && (rating < 1 || rating > 5)) {
-      return res.status(400).json({ error: 'Рейтингът трябва да е между 1 и 5' });
-    }
-
-    await pool.query(
-      'INSERT INTO platform_comments (user_id, content, rating) VALUES (?, ?, ?)',
-      [req.user.id, content, rating || null]
-    );
-
-    res.status(201).json({ message: 'Коментарът е изпратен за одобрение' });
-  } catch (error) {
-    console.error('Add platform comment error:', error);
-    res.status(500).json({ error: 'Грешка при добавяне на коментар' });
+  // Validate input
+  const validationErrors = validateCommentInput(req.body);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Моля, поправете грешките във формата',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: validationErrors
+      }
+    });
   }
-});
 
-// Коментари за шаблон
+  await pool.query(
+    'INSERT INTO platform_comments (user_id, content, rating) VALUES (?, ?, ?)',
+    [req.user.id, content, rating || null]
+  );
+
+  res.status(201).json({ 
+    success: true,
+    message: 'Коментарът е изпратен за одобрение' 
+  });
+}));
 
 // Всички одобрени коментари за шаблон (публичен)
-router.get('/templates/:templateId', async (req, res) => {
-  try {
-    const [comments] = await pool.query(
-      `SELECT pc.*, u.first_name, u.last_name 
-       FROM template_comments pc 
-       LEFT JOIN users u ON pc.user_id = u.id 
-       WHERE pc.template_id = ? AND pc.status = 'approved'
-       ORDER BY pc.created_at DESC`,
-      [req.params.templateId]
-    );
-    res.json(comments);
-  } catch (error) {
-    console.error('Get template comments error:', error);
-    res.status(500).json({ error: 'Грешка при извличане на коментари' });
+router.get('/templates/:templateId', asyncHandler(async (req, res) => {
+  const templateId = parseInt(req.params.templateId);
+  
+  if (isNaN(templateId)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Невалидно ID на шаблон',
+        code: ErrorCodes.INVALID_VALUE
+      }
+    });
   }
-});
+  
+  const [comments] = await pool.query(
+    `SELECT pc.*, u.first_name, u.last_name 
+     FROM template_comments pc 
+     LEFT JOIN users u ON pc.user_id = u.id 
+     WHERE pc.template_id = ? AND pc.status = 'approved'
+     ORDER BY pc.created_at DESC`,
+    [templateId]
+  );
+  
+  res.json({
+    success: true,
+    data: comments,
+    count: comments.length
+  });
+}));
 
 // Добавяне на коментар за шаблон
-router.post('/templates/:templateId', requireAuth, async (req, res) => {
-  try {
-    const { content, rating } = req.body;
+router.post('/templates/:templateId', requireAuth, asyncHandler(async (req, res) => {
+  const templateId = parseInt(req.params.templateId);
+  const { content, rating } = req.body;
 
-    if (!content) {
-      return res.status(400).json({ error: 'Съдържанието на коментара е задължително' });
-    }
-
-    if (rating && (rating < 1 || rating > 5)) {
-      return res.status(400).json({ error: 'Рейтингът трябва да е между 1 и 5' });
-    }
-
-    // Проверка дали шаблонът съществува
-    const [templates] = await pool.query('SELECT id FROM templates WHERE id = ?', [req.params.templateId]);
-    if (templates.length === 0) {
-      return res.status(404).json({ error: 'Шаблонът не е намерен' });
-    }
-
-    await pool.query(
-      'INSERT INTO template_comments (user_id, template_id, content, rating) VALUES (?, ?, ?, ?)',
-      [req.user.id, req.params.templateId, content, rating || null]
-    );
-
-    res.status(201).json({ message: 'Коментарът е изпратен за одобрение' });
-  } catch (error) {
-    console.error('Add template comment error:', error);
-    res.status(500).json({ error: 'Грешка при добавяне на коментар' });
+  if (isNaN(templateId)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Невалидно ID на шаблон',
+        code: ErrorCodes.INVALID_VALUE
+      }
+    });
   }
-});
+
+  // Validate input
+  const validationErrors = validateCommentInput(req.body);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Моля, поправете грешките във формата',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: validationErrors
+      }
+    });
+  }
+
+  // Check if template exists
+  const [templates] = await pool.query('SELECT id FROM templates WHERE id = ?', [templateId]);
+  if (templates.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: 'Шаблонът не е намерен',
+        code: ErrorCodes.NOT_FOUND
+      }
+    });
+  }
+
+  await pool.query(
+    'INSERT INTO template_comments (user_id, template_id, content, rating) VALUES (?, ?, ?, ?)',
+    [req.user.id, templateId, content, rating || null]
+  );
+
+  res.status(201).json({ 
+    success: true,
+    message: 'Коментарът е изпратен за одобрение' 
+  });
+}));
 
 // Admin: Всички чакащи коментари
-router.get('/pending', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const [platformComments] = await pool.query(
-      `SELECT 'platform' as type, pc.*, u.first_name, u.last_name 
-       FROM platform_comments pc 
-       LEFT JOIN users u ON pc.user_id = u.id 
-       WHERE pc.status = 'pending'`
-    );
+router.get('/pending', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const [platformComments] = await pool.query(
+    `SELECT 'platform' as type, pc.*, u.first_name, u.last_name 
+     FROM platform_comments pc 
+     LEFT JOIN users u ON pc.user_id = u.id 
+     WHERE pc.status = 'pending'`
+  );
 
-    const [templateComments] = await pool.query(
-      `SELECT 'template' as type, tc.*, u.first_name, u.last_name, t.name as template_name
-       FROM template_comments tc 
-       LEFT JOIN users u ON tc.user_id = u.id 
-       LEFT JOIN templates t ON tc.template_id = t.id
-       WHERE tc.status = 'pending'`
-    );
+  const [templateComments] = await pool.query(
+    `SELECT 'template' as type, tc.*, u.first_name, u.last_name, t.name as template_name
+     FROM template_comments tc 
+     LEFT JOIN users u ON tc.user_id = u.id 
+     LEFT JOIN templates t ON tc.template_id = t.id
+     WHERE tc.status = 'pending'`
+  );
 
-    const allComments = [...platformComments, ...templateComments].sort(
-      (a, b) => new Date(b.created_at) - new Date(a.created_at)
-    );
+  const allComments = [...platformComments, ...templateComments].sort(
+    (a, b) => new Date(b.created_at) - new Date(a.created_at)
+  );
 
-    res.json(allComments);
-  } catch (error) {
-    console.error('Get pending comments error:', error);
-    res.status(500).json({ error: 'Грешка при извличане на коментари' });
-  }
-});
+  res.json({
+    success: true,
+    data: allComments,
+    count: allComments.length
+  });
+}));
 
 // Admin: Одобряване на коментар
-router.patch('/:id/approve', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { type } = req.body; // 'platform' or 'template'
+router.patch('/:id/approve', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const { type } = req.body; // 'platform' or 'template'
 
-    const table = type === 'template' ? 'template_comments' : 'platform_comments';
-    const [result] = await pool.query(
-      `UPDATE ${table} SET status = 'approved' WHERE id = ?`,
-      [req.params.id]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Коментарът не е намерен' });
-    }
-
-    res.json({ message: 'Коментарът е одобрен' });
-  } catch (error) {
-    console.error('Approve comment error:', error);
-    res.status(500).json({ error: 'Грешка при одобряване' });
+  if (isNaN(commentId)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Невалидно ID на коментар',
+        code: ErrorCodes.INVALID_VALUE
+      }
+    });
   }
-});
+
+  if (!type || !['platform', 'template'].includes(type)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Типът на коментара е задължителен (platform или template)',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: [{ field: 'type', message: 'Типът на коментара е задължителен' }]
+      }
+    });
+  }
+
+  const table = type === 'template' ? 'template_comments' : 'platform_comments';
+  const [result] = await pool.query(
+    `UPDATE ${table} SET status = 'approved' WHERE id = ?`,
+    [commentId]
+  );
+
+  if (result.affectedRows === 0) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: 'Коментарът не е намерен',
+        code: ErrorCodes.NOT_FOUND
+      }
+    });
+  }
+
+  res.json({ 
+    success: true,
+    message: 'Коментарът е одобрен' 
+  });
+}));
 
 // Admin: Отхвърляне/изтриване на коментар
-router.delete('/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { type } = req.query; // 'platform' or 'template'
+router.delete('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const { type } = req.query; // 'platform' or 'template'
 
-    const table = type === 'template' ? 'template_comments' : 'platform_comments';
-    const [result] = await pool.query(`DELETE FROM ${table} WHERE id = ?`, [req.params.id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Коментарът не е намерен' });
-    }
-
-    res.json({ message: 'Коментарът е отхвърлен' });
-  } catch (error) {
-    console.error('Reject comment error:', error);
-    res.status(500).json({ error: 'Грешка при изтриване' });
+  if (isNaN(commentId)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Невалидно ID на коментар',
+        code: ErrorCodes.INVALID_VALUE
+      }
+    });
   }
-});
+
+  if (!type || !['platform', 'template'].includes(type)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Типът на коментара е задължителен (platform или template)',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: [{ field: 'type', message: 'Типът на коментара е задължителен' }]
+      }
+    });
+  }
+
+  const table = type === 'template' ? 'template_comments' : 'platform_comments';
+  const [result] = await pool.query(`DELETE FROM ${table} WHERE id = ?`, [commentId]);
+
+  if (result.affectedRows === 0) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: 'Коментарът не е намерен',
+        code: ErrorCodes.NOT_FOUND
+      }
+    });
+  }
+
+  res.json({ 
+    success: true,
+    message: 'Коментарът е отхвърлен' 
+  });
+}));
 
 module.exports = router;
 
