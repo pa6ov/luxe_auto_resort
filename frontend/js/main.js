@@ -200,7 +200,7 @@ const ui = {
   },
   
   formatPrice(price) {
-    return `${parseFloat(price).toFixed(2)} лв.`;
+    return `€${parseFloat(price).toFixed(2)}`;
   },
   
   getStatusBadge(status) {
