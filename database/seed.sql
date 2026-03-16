@@ -22,7 +22,7 @@ INSERT INTO cars (brand, model, year, color, license_plate, price_per_day, type,
 ('VW', 'Golf', 2009, 'Сив', 'B4567DD', 38.00, 'sedan', 5, 'automatic', 'petrol', 149000, 'images/vw-golf-2009-4.webp', 'Класическият Golf - надежден и комфортен. Перфектното съчетание между качество и цена.', TRUE),
 ('VW', 'Golf', 2009, 'Черен', 'B5678EE', 38.00, 'sedan', 5, 'automatic', 'petrol', 216000, 'images/vw-golf-2009-5.webp', 'VW Golf с автоматична скоростна кутия. Просторен интериор и отлично пътно поведение.', TRUE),
 ('Citroen', 'C4', 2008, 'Сив', 'B6789FF', 35.00, 'sedan', 7, 'automatic', 'petrol', 197000, 'images/citroen-c4-2008-6.webp', 'Просторен семеен автомобил с 7 места. Идеален за семейни пътувания.', TRUE),
-('Citroen', 'C4', 2012, 'Бял', 'B7890GG', 42.00, 'sedan', 5, 'automatic', 'diesel', 148000, 'images/citroen-c4-2012-7.webp', 'Елегантен седан с икономичен дизелов двигатель. Ниски експлоатационни разходи.', TRUE),
+('Citroen', 'C4', 2012, 'Бял', 'B7890GG', 42.00, 'sedan', 5, 'automatic', 'diesel', 148000, 'images/citroen-c4-2012-7.webp', 'Елегантен седан с икономичен дизелов двигател. Ниски експлоатационни разходи.', TRUE),
 
 -- Compact Class
 ('VW', 'Passat', 2010, 'Тъмно син', 'B8901HH', 55.00, 'sedan', 5, 'automatic', 'diesel', 160000, 'images/vw-passat-2010-8.webp', 'Бизнес клас седан с луксозен интериор. Просторен салон, кожени седалки и модерна мултимедия.', TRUE),
