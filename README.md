@@ -1,22 +1,40 @@
 # Luxe Auto Resort
 
-Луксозно уеб приложение за наемане на автомобили - дипломен проект.
+**Luxe Auto Resort** is a premium car rental management platform designed to provide a seamless booking experience for luxury vehicles. The system features a robust backend API, a dynamic frontend, and a comprehensive admin dashboard for fleet and reservation management.
 
-## 🚀 Технологии
+## 📑 Table of Contents
+- [Overview](#overview)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Installation & Setup](#installation--setup)
+- [Project Structure](#project-structure)
+- [API Documentation](#api-documentation)
+- [Utilities](#utilities)
 
-- **Frontend**: HTML, CSS, JavaScript (Vanilla)
-- **Backend**: Node.js, Express
-- **База данни**: MySQL
-- **Автентикация**: JWT + bcrypt
+## 📖 Overview
+This application enables users to browse a catalog of high-end vehicles, view rental packages (templates), and make reservation requests. Administrators have full control over the fleet, rental templates, and can approve or reject booking requests via a dedicated dashboard.
 
-## 📋 Изисквания
+## ✨ Features
 
-- Node.js (v14+)
-- MySQL (v5.7+)
+### 👤 Client Features
+- **User Authentication**: Secure registration and login (JWT-based).
+- **Vehicle Catalog**: Browse luxury cars with filters for brand, type, and price.
+- **Rental Templates**: Choose from pre-configured packages (e.g., Weekend Special, Business).
+- **Request Management**: Create, view, and cancel rental requests.
+- **Responsive UI**: Optimized for desktop and mobile devices.
 
-## 🖥️ LAN Достъп (за тестване от телефон)
+### 🛡️ Admin Features
+- **Dashboard**: View key metrics (Revenue, Top Cars, Request Status).
+- **Fleet Management**: Add, edit, and remove vehicles.
+- **Request Processing**: Workflow to Approve/Reject/Complete rental requests.
+- **Template Control**: Manage rental packages and discounts.
 
-### Стартиране за LAN достъп
+## 🛠 Tech Stack
+- **Backend**: Node.js, Express.js
+- **Database**: MySQL
+- **Frontend**: HTML5, CSS3, JavaScript (Vanilla)
+- **Security**: bcrypt (hashing), jsonwebtoken (auth), cors
 
 ```bash
 cd backend
@@ -29,229 +47,45 @@ HOST=0.0.0.0 PORT=3000 npm start
 
 Пример: `http://192.168.1.100:3000`
 
-### Автоматично откриване на IP
+2.  **Database Configuration**
+    - Create a MySQL database named `luxe_auto_resort`.
+    - Run the schema script to create tables:
+      ```bash
+      mysql -u root -p luxe_auto_resort < database/schema.sql
+      ```
+    - Ensure `backend/config/database.js` contains your correct DB credentials.
 
-Ако не знаете вашия IP адрес, може да го откриете с:
+3.  **Backend Dependencies**
+    ```bash
+    cd backend
+    npm install
+    ```
 
-**macOS:**
-```bash
-ipconfig getifaddr en0
-```
+4.  **Start the Application**
+    ```bash
+    node server.js
+    ```
+    The server will start on port **3000**.
+    - **App URL**: `http://localhost:3000`
+    - **API Base**: `http://localhost:3000/api`
 
-**Linux/Windows:**
-```bash
-hostname -I
-```
+## 🧑‍💻 Demo Accounts
 
-## 🔧 Отстраняване на проблеми
+The database is seeded with the following accounts for testing purposes. The passwords are provided here for convenience, but are stored securely hashed in the database.
 
-### API не работи през LAN
+| Role          | Email             | Password  |
+|---------------|-------------------|-----------|
+| Administrator | admin@luxeauto.bg | admin123  |
+| Client        | ivan@abv.bg       | ivan123   |
+| Client        | maria@abv.bg      | mariya123 |
 
-1. **Проверете CORS настройките** - уверете се, че `FRONTEND_URL` е правилно конфигуриран
-2. **Проверете HOST** - сървърът трябва да слуша на `0.0.0.0`, не само на `localhost`
-3. **Firewall** - уверете се, че порт 3000 е отворен
 
-### Проблеми със зареждане на данни
+## 🔧 Utilities
 
-1. **Отворете DevTools** (F12) и проверете Console за грешки
-2. **Проверете Network tab** за неуспешни API заявки
-3. **Уверете се**, че backend сървърът работи
-
-### Мобилни устройства
-
-- Използвайте **Chrome DevTools** с **Device Mode** за тестване
-- Или тествайте директно от вашия телефон в същата WiFi мрежа
-
-## 📱 Мобилна поддръжка
-
-Проектът включва:
-- Пълна mobile responsiveness
-- Touch-friendly бутони (min 48px height)
-- Хамбургер меню за навигация
-- Адаптивни таблици и карти
-- Поддръжка на жестове
-
-### 1. Инсталиране на зависимости
+### Image Normalization
+A script is available to standardize image filenames (format: `brand-model-year-id.ext`) and update the database references.
 
 ```bash
-cd backend
-npm install
+node backend/scripts/rename_images.js
 ```
-
-### 2. Настройка на база данни
-
-Създайте база данни в MySQL:
-```sql
-CREATE DATABASE luxe_auto_resort;
-```
-
-Импортирайте схемата и seed данните:
-```bash
-# Ако използвате MySQL клиент
-mysql -u root -p luxe_auto_resort < database/schema.sql
-mysql -u root -p luxe_auto_resort < database/seed.sql
-
-# Или чрез phpMyAdmin/XAMPP
-# Импортирайте файловете ръчно
-```
-
-### 3. Конфигурация
-
-Създайте `.env` файл в `/backend` папката (по избор):
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=luxe_auto_resort
-JWT_SECRET=your_secret_key
-PORT=3000
-```
-
-### 4. Стартиране
-
-```bash
-cd backend
-npm start
-```
-
-Сървърът ще стартира на `http://localhost:3000`
-
-## 🔐 Тестови акаунти
-
-| Роля | Имейл | Парола |
-|------|-------|--------|
-| Администратор | admin@luxeauto.bg | admin123 |
-| Клиент | ivan@abv.bg | ivan123 |
-| Клиент | maria@abv.bg | mariya123 |
-
-## 📁 Структура на проекта
-
-```
-lar/
-├── backend/
-│   ├── config/
-│   │   └── database.js
-│   ├── middleware/
-│   │   └── auth.js
-│   ├── routes/
-│   │   ├── auth.js
-│   │   ├── cars.js
-│   │   ├── templates.js
-│   │   ├── requests.js
-│   │   ├── costs.js
-│   │   ├── contacts.js
-│   │   └── comments.js
-│   ├── server.js
-│   └── package.json
-├── database/
-│   ├── schema.sql
-│   └── seed.sql
-├── frontend/
-│   ├── css/
-│   │   └── style.css
-│   ├── js/
-│   │   └── main.js
-│   ├── index.html
-│   ├── cars.html
-│   ├── car-details.html
-│   ├── templates.html
-│   ├── login.html
-│   ├── register.html
-│   ├── create-request.html
-│   ├── my-requests.html
-│   ├── contacts.html
-│   ├── comments.html
-│   └── admin.html
-├── docs/
-│   └── Diploma_Documentation.md
-├── README.md
-└── TODO.md
-```
-
-## 🌐 API Endpoints
-
-### Автентикация
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| POST | `/api/auth/register` | Регистрация на клиент |
-| POST | `/api/auth/login` | Вход в системата |
-| GET | `/api/auth/me` | Текущ потребител |
-| POST | `/api/auth/logout` | Изход |
-
-### Автомобили
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/api/cars` | Всички автомобили (филтри) |
-| GET | `/api/cars/:id` | Детайли за автомобил |
-| POST | `/api/cars` | Добавяне (админ) |
-| PUT | `/api/cars/:id` | Редактиране (админ) |
-| DELETE | `/api/cars/:id` | Изтриване (админ) |
-
-### Шаблони
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/api/templates` | Всички шаблони |
-| GET | `/api/templates/:id` | Детайли за шаблон |
-| POST | `/api/templates` | Създаване (админ) |
-| PUT | `/api/templates/:id` | Редактиране (админ) |
-| DELETE | `/api/templates/:id` | Изтриване (админ) |
-
-### Заявки
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| POST | `/api/requests` | Създаване на заявка |
-| GET | `/api/requests/my` | Моите заявки |
-| GET | `/api/requests` | Всички заявки (админ) |
-| PATCH | `/api/requests/:id/status` | Промяна на статус |
-| POST | `/api/requests/:id/cancel` | Отмяна на заявка |
-
-### Разходи
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/api/costs/my` | Моите разходи |
-| GET | `/api/costs/clients` | Разходи по клиенти (админ) |
-
-### Контакти
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| POST | `/api/contacts` | Изпращане на съобщение |
-| GET | `/api/contacts` | Всички съобщения (админ) |
-
-### Коментари
-| Метод | Endpoint | Описание |
-|-------|----------|----------|
-| GET | `/api/comments/platform` | Коментари за платформата |
-| POST | `/api/comments/platform` | Добавяне на коментар |
-| GET | `/api/comments/templates/:id` | Коментари за шаблон |
-| POST | `/api/comments/templates/:id` | Добавяне за шаблон |
-| GET | `/api/comments/pending` | Чакащи коментари (админ) |
-| PATCH | `/api/comments/:id/approve` | Одобряване (админ) |
-| DELETE | `/api/comments/:id` | Изтриване (админ) |
-
-## 📱 Функционалности
-
-- ✅ Регистрация и вход
-- ✅ Преглед на автомобили с филтри
-- ✅ Създаване на заявки за наем
-- ✅ Множествен избор на автомобили
-- ✅ Изчисляване на цена с отстъпки
-- ✅ Админ панел
-- ✅ Управление на автомобили
-- ✅ Модерация на коментари
-- ✅ Преглед на контактни съобщения
-
-## 🎨 Дизайн
-
-Цветова палитра:
-- **Фон**: #171614
-- **Акцент**: #4B88A2
-- **Карти**: #ECE5F0
-- **CTA**: #E98A15
-
-## 📄 Документация
-
-Пълната дипломна документация е налична в `/docs/Diploma_Documentation.md`
-
-## 📝 License
-
-Този проект е създаден за образователни цели.
+*⚠️ **Warning**: Back up your database and images folder before running this script.*
