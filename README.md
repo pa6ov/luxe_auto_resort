@@ -41,11 +41,12 @@ cd backend
 HOST=0.0.0.0 PORT=3000 npm start
 ```
 
-Сървърът ще бъде достъпен на:
-- Локално: `http://localhost:3000`
-- В LAN: `http://YOUR_IP_ADDRESS:3000`
+The server will be accessible at:
+- Local: `http://localhost:3000`
+- LAN: `http://YOUR_IP_ADDRESS:3000`
 
 Пример: `http://192.168.1.100:3000`
+Example: `http://192.168.1.100:3000`
 
 2.  **Database Configuration**
     - Create a MySQL database named `luxe_auto_resort`.
