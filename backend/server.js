@@ -137,23 +137,25 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   console.log('   r - Restart server');
   console.log('   x - Exit\n');
   
-  // Enable keyboard input
-  readline.emitKeypressEvents(process.stdin);
-  process.stdin.setRawMode(true);
-  
-  process.stdin.on('keypress', (str, key) => {
-    if (key.name === 'r') {
-      console.log('\n🔄 Restarting server...');
-      server.close(() => {
-        process.exit(0);
-      });
-    } else if (key.name === 'x' || key.ctrl === 'c') {
-      console.log('\n👋 Exiting...');
-      server.close(() => {
-        process.exit(0);
-      });
-    }
-  });
+  // Enable keyboard input (only in TTY mode)
+  if (process.stdin.isTTY) {
+    readline.emitKeypressEvents(process.stdin);
+    process.stdin.setRawMode(true);
+
+    process.stdin.on('keypress', (str, key) => {
+      if (key.name === 'r') {
+        console.log('\n🔄 Restarting server...');
+        server.close(() => {
+          process.exit(0);
+        });
+      } else if (key.name === 'x' || key.ctrl === 'c') {
+        console.log('\n👋 Exiting...');
+        server.close(() => {
+          process.exit(0);
+        });
+      }
+    });
+  }
 });
 
 module.exports = app;

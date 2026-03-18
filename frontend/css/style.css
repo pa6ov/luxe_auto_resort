@@ -82,13 +82,21 @@ header .container {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+}
+
+header nav {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .logo {
-  font-size: 1.8rem;
+  font-size: clamp(1.2rem, 3vw, 1.8rem);
   font-weight: bold;
   color: var(--cta);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .logo span {
@@ -98,15 +106,21 @@ header .container {
 nav ul {
   display: flex;
   list-style: none;
-  gap: clamp(0.75rem, 2vw, 1.5rem);
+  gap: clamp(0.3rem, 1vw, 1rem);
+  flex-wrap: nowrap;
+  align-items: center;
 }
 
 nav a {
   color: var(--text-light);
   font-weight: 500;
-  padding: var(--space-xs) var(--space-sm);
+  padding: clamp(0.4rem, 0.8vw, 0.6rem) clamp(0.6rem, 1.2vw, 1rem);
   border-radius: var(--border-radius);
   transition: var(--transition);
+  white-space: nowrap;
+  font-size: clamp(0.75rem, 1.1vw, 0.95rem);
+  display: inline-block;
+  line-height: 1.2;
 }
 
 nav a:hover,
@@ -973,6 +987,18 @@ footer a:hover {
 /* ========================
    RESPONSIVE LAYOUTS
    ======================== */
+
+/* Intermediate - prevent nav wrapping */
+@media (max-width: 900px) {
+  nav a {
+    padding: 0.35rem 0.5rem;
+    font-size: 0.75rem;
+  }
+
+  nav ul {
+    gap: 0.25rem;
+  }
+}
 
 /* Tablet */
 @media (max-width: 1024px) {
