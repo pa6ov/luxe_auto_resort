@@ -224,6 +224,109 @@ router.post('/logout', (req, res) => {
   });
 });
 
+// Обновяване на профил (лични данни)
+router.put('/profile', requireAuth, asyncHandler(async (req, res) => {
+  const { first_name, last_name, phone } = req.body;
+  const errors = [];
+
+  if (!first_name) {
+    errors.push({ field: 'first_name', message: 'Името е задължително' });
+  } else if (first_name.trim().length < 2) {
+    errors.push({ field: 'first_name', message: 'Името трябва да е поне 2 символа' });
+  } else if (first_name.trim().length > 50) {
+    errors.push({ field: 'first_name', message: 'Името не може да надвишава 50 символа' });
+  }
+
+  if (!last_name) {
+    errors.push({ field: 'last_name', message: 'Фамилията е задължителна' });
+  } else if (last_name.trim().length < 2) {
+    errors.push({ field: 'last_name', message: 'Фамилията трябва да е поне 2 символа' });
+  } else if (last_name.trim().length > 50) {
+    errors.push({ field: 'last_name', message: 'Фамилията не може да надвишава 50 символа' });
+  }
+
+  if (phone && !/^[0-9+\s\-()]{7,20}$/.test(phone)) {
+    errors.push({ field: 'phone', message: 'Невалиден формат на телефонния номер' });
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Моля, поправете грешките',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: errors
+      }
+    });
+  }
+
+  await pool.query(
+    'UPDATE users SET first_name = ?, last_name = ?, phone = ? WHERE id = ?',
+    [first_name.trim(), last_name.trim(), phone?.trim() || null, req.user.id]
+  );
+
+  const [users] = await pool.query(
+    'SELECT id, email, first_name, last_name, phone, role FROM users WHERE id = ?',
+    [req.user.id]
+  );
+
+  res.json({
+    success: true,
+    message: 'Профилът е обновен успешно',
+    data: users[0]
+  });
+}));
+
+// Смяна на парола
+router.put('/password', requireAuth, asyncHandler(async (req, res) => {
+  const { current_password, new_password } = req.body;
+  const errors = [];
+
+  if (!current_password) {
+    errors.push({ field: 'current_password', message: 'Текущата парола е задължителна' });
+  }
+  if (!new_password) {
+    errors.push({ field: 'new_password', message: 'Новата парола е задължителна' });
+  } else if (new_password.length < 6) {
+    errors.push({ field: 'new_password', message: 'Паролата трябва да е поне 6 символа' });
+  } else if (!/[a-zA-Z]/.test(new_password)) {
+    errors.push({ field: 'new_password', message: 'Паролата трябва да съдържа поне една буква' });
+  } else if (!/[0-9]/.test(new_password)) {
+    errors.push({ field: 'new_password', message: 'Паролата трябва да съдържа поне една цифра' });
+  }
+
+  if (errors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Моля, поправете грешките',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: errors
+      }
+    });
+  }
+
+  const [users] = await pool.query('SELECT * FROM users WHERE id = ?', [req.user.id]);
+  const validPassword = await bcrypt.compare(current_password, users[0].password);
+
+  if (!validPassword) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Текущата парола е грешна',
+        code: ErrorCodes.INVALID_CREDENTIALS,
+        details: [{ field: 'current_password', message: 'Текущата парола е грешна' }]
+      }
+    });
+  }
+
+  const hashed = await bcrypt.hash(new_password, 10);
+  await pool.query('UPDATE users SET password = ? WHERE id = ?', [hashed, req.user.id]);
+
+  res.json({ success: true, message: 'Паролата е сменена успешно' });
+}));
+
+
 // Актуализация на профил
 router.put('/profile', requireAuth, asyncHandler(async (req, res) => {
   const { first_name, last_name, phone, avatar_url } = req.body;

@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Мнения - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .comment-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .edit-form { margin-top:12px; display:none; }
+    .edit-form textarea { width:100%; min-height:80px; resize:vertical; }
+    .edit-form .rating { margin-bottom:10px; }
+    .edit-form .btn-row { display:flex; gap:8px; margin-top:8px; }
+  </style>
 </head>
 <body>
   <header>
@@ -37,7 +44,10 @@
 
       <!-- Comments List -->
       <div class="card" style="margin-top:30px;">
-        <h3 style="color:var(--cta); margin-bottom:25px;">💬 Всички мнения</h3>
+        <h3 style="color:var(--cta); margin-bottom:25px;">
+          💬 Всички мнения
+          <span id="commentsCount" style="font-size:0.85rem; font-weight:normal; opacity:.7; margin-left:8px;"></span>
+        </h3>
         <div id="commentsList">
           <div class="loading">Зареждане на мнения...</div>
         </div>
@@ -48,10 +58,7 @@
   <footer>
     <div class="container">
       <div class="footer-content">
-        <div>
-          <h3>Luxe Auto Resort</h3>
-          <p>Вашият доверен партньор за луксозно наемане на автомобили.</p>
-        </div>
+        <div><h3>Luxe Auto Resort</h3><p>Вашият доверен партньор за луксозно наемане на автомобили.</p></div>
         <div>
           <h3>Бързи връзки</h3>
           <ul>
@@ -78,99 +85,186 @@
 
   <script src="js/main.js"></script>
   <script>
-    let selectedRating = 0;
+    let newRating = 0;
+    let comments  = [];
 
+    // ─── Star rating widget ────────────────────────────────────────────────────
+    function setNewRating(r) {
+      newRating = r;
+      document.getElementById('newRatingInput').value = r;
+      renderStars('newStars', r, 'setNewRating');
+    }
+
+    function setEditRating(commentId, r) {
+      document.getElementById('editRating-' + commentId).value = r;
+      renderStars('editStars-' + commentId, r, `setEditRating(${commentId},`, true);
+    }
+
+    function renderStars(containerId, active, callbackPrefix, partial = false) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = [1,2,3,4,5].map(i => {
+        const cb = partial
+          ? `${callbackPrefix}${i})`
+          : `${callbackPrefix}(${i})`;
+        return `<span onclick="${cb}" style="cursor:pointer; font-size:1.8rem;
+                color:${i <= active ? 'var(--cta)' : 'rgba(233,138,21,0.25)'};">★</span>`;
+      }).join('');
+    }
+
+    // ─── Render the "Add comment" form ────────────────────────────────────────
     function renderCommentForm() {
       const container = document.getElementById('commentFormContainer');
-      
       if (!LuxeAuto.auth.isLoggedIn()) {
         container.innerHTML = `
           <div class="card">
             <p style="text-align:center;">
-              <a href="login.html">Влезте в профила си</a> или 
+              <a href="login.html">Влезте в профила си</a> или
               <a href="register.html">се регистрирайте</a>, за да оставите мнение
             </p>
-          </div>
-        `;
+          </div>`;
         return;
       }
-      
       container.innerHTML = `
         <div class="card">
           <h3 style="color:var(--cta); margin-bottom:20px;">✍️ Оставете вашето мнение</h3>
           <form id="commentForm">
             <div class="form-group">
-              <label>Рейтинг</label>
-              <div class="rating" id="ratingStars" style="font-size:2rem; cursor:pointer;">
-                ${[1,2,3,4,5].map(i => `
-                  <span onclick="setRating(${i})" id="star-${i}">★</span>
-                `).join('')}
-              </div>
-              <input type="hidden" id="rating" name="rating" value="0">
+              <label>Рейтинг (по избор)</label>
+              <div id="newStars" style="display:flex; gap:4px;"></div>
+              <input type="hidden" id="newRatingInput" value="0">
             </div>
             <div class="form-group">
-              <label for="comment">Вашето мнение *</label>
-              <textarea id="comment" name="comment" required placeholder="Споделите вашето преживяване с нас..."></textarea>
+              <label for="newContent">Вашето мнение *</label>
+              <textarea id="newContent" required placeholder="Споделете вашето преживяване с нас..."></textarea>
             </div>
-            <button type="submit" class="btn btn-primary">Изпрати мнение</button>
+            <button type="submit" class="btn btn-primary">📤 Изпрати мнение</button>
           </form>
           <div id="formMessage"></div>
-        </div>
-      `;
-      
-      document.getElementById('commentForm').addEventListener('submit', submitComment);
-    }
+        </div>`;
 
-    function setRating(rating) {
-      selectedRating = rating;
-      document.getElementById('rating').value = rating;
-      
-      for (let i = 1; i <= 5; i++) {
-        const star = document.getElementById(`star-${i}`);
-        if (i <= rating) {
-          star.classList.add('active');
-        } else {
-          star.classList.remove('active');
-        }
-      }
+      renderStars('newStars', 0, 'setNewRating');
+      document.getElementById('commentForm').addEventListener('submit', submitComment);
     }
 
     async function submitComment(e) {
       e.preventDefault();
-      const messageDiv = document.getElementById('formMessage');
-      messageDiv.innerHTML = '<div class="loading">Изпращане...</div>';
-      
+      const msg = document.getElementById('formMessage');
+      msg.innerHTML = '<div class="loading">Изпращане...</div>';
       try {
         await LuxeAuto.api.post('/comments/platform', {
-          content: document.getElementById('comment').value,
-          rating: selectedRating || null
+          content: document.getElementById('newContent').value,
+          rating:  newRating || null
         });
-        
-        messageDiv.innerHTML = '<div class="alert alert-success">Благодарим! Вашето мнение ще бъде публикувано след одобрение.</div>';
+        msg.innerHTML = '<div class="alert alert-success">✅ Благодарим! Мнението ви ще бъде публикувано след одобрение от администратор.</div>';
         document.getElementById('commentForm').reset();
-        setRating(0);
-        loadComments();
-      } catch (error) {
-        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        newRating = 0;
+        renderStars('newStars', 0, 'setNewRating');
+      } catch (err) {
+        msg.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
       }
     }
 
+    // ─── Toggle edit form for a comment ───────────────────────────────────────
+    function toggleEditForm(commentId) {
+      const form = document.getElementById('editForm-' + commentId);
+      if (!form) return;
+      const isOpen = form.style.display === 'block';
+      // Close all open edit forms first
+      document.querySelectorAll('.edit-form').forEach(f => f.style.display = 'none');
+      if (!isOpen) form.style.display = 'block';
+    }
+
+    async function saveEdit(commentId) {
+      const content = document.getElementById('editContent-' + commentId).value.trim();
+      const rating  = parseInt(document.getElementById('editRating-' + commentId).value) || null;
+      if (!content) { alert('Съдържанието не може да е празно'); return; }
+      try {
+        await LuxeAuto.api.put(`/comments/${commentId}`, { content, rating, type: 'platform' });
+        await loadComments();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function deleteOwnComment(commentId) {
+      if (!confirm('Сигурни ли сте, че искате да изтриете това мнение?')) return;
+      try {
+        await LuxeAuto.api.delete(`/comments/${commentId}/own`);
+        await loadComments();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // ─── Load and render comments ──────────────────────────────────────────────
     async function loadComments() {
       const container = document.getElementById('commentsList');
-      
+      const countEl   = document.getElementById('commentsCount');
       try {
-        const comments = await LuxeAuto.api.get('/comments/platform');
-        
+        comments = await LuxeAuto.api.get('/comments/platform');
+        countEl.textContent = `(${comments.length})`;
+
         if (comments.length === 0) {
-          container.innerHTML = '<p style="text-align:center; color:rgba(236,229,240,0.6);">Все още няма мнения. Бъдете първият!</p>';
+          container.innerHTML = '<p style="text-align:center; color:rgba(236,229,240,0.5);">Все още няма мнения. Бъдете първият!</p>';
           return;
         }
-        
+
+        const currentUserId = LuxeAuto.auth.user?.id;
         container.innerHTML = `<div class="comments-section">
-          ${comments.map(c => LuxeAuto.createCommentHTML(c)).join('')}
+          ${comments.map(c => {
+            const author = c.first_name && c.last_name
+              ? `${c.first_name} ${c.last_name}`
+              : c.guest_name || 'Анонимен';
+            const isOwner = currentUserId && c.user_id === currentUserId;
+            const existingRating = c.rating || 0;
+
+            return `
+              <div class="comment" id="comment-${c.id}">
+                <div class="comment-header">
+                  <span class="comment-author">👤 ${author}</span>
+                  <span class="comment-date">${ui.formatDate(c.created_at)}</span>
+                </div>
+                ${existingRating ? `<div style="color:var(--cta); margin:6px 0; font-size:1.1rem;">
+                  ${'★'.repeat(existingRating)}${'☆'.repeat(5-existingRating)}
+                  <span style="font-size:0.8rem; opacity:.7; margin-left:4px;">${existingRating}/5</span>
+                </div>` : ''}
+                <p class="comment-content">${c.content}</p>
+
+                ${isOwner ? `
+                  <div class="comment-actions">
+                    <button class="btn btn-sm btn-secondary" onclick="toggleEditForm(${c.id})">✏️ Редактирай</button>
+                    <button class="btn btn-sm btn-danger"    onclick="deleteOwnComment(${c.id})">🗑️ Изтрий</button>
+                  </div>
+                  <div class="edit-form" id="editForm-${c.id}">
+                    <div class="form-group" style="margin-bottom:8px;">
+                      <label style="font-size:0.85rem;">Рейтинг</label>
+                      <div id="editStars-${c.id}" style="display:flex; gap:4px;"></div>
+                      <input type="hidden" id="editRating-${c.id}" value="${existingRating}">
+                    </div>
+                    <div class="form-group" style="margin-bottom:8px;">
+                      <textarea id="editContent-${c.id}" style="width:100%; min-height:80px; resize:vertical;
+                        padding:10px; background:rgba(255,255,255,0.05); border:2px solid rgba(75,136,162,0.3);
+                        border-radius:8px; color:var(--text-light); font-size:1rem;">${c.content}</textarea>
+                    </div>
+                    <div class="edit-form btn-row">
+                      <button class="btn btn-sm btn-primary"  onclick="saveEdit(${c.id})">💾 Запази</button>
+                      <button class="btn btn-sm btn-outline"   onclick="toggleEditForm(${c.id})">Отказ</button>
+                    </div>
+                  </div>
+                ` : ''}
+              </div>`;
+          }).join('')}
         </div>`;
-      } catch (error) {
-        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+
+        // Initialize edit star widgets for owned comments
+        const currentId = LuxeAuto.auth.user?.id;
+        comments.filter(c => c.user_id === currentId).forEach(c => {
+          renderStars('editStars-' + c.id, c.rating || 0, `setEditRating(${c.id},`, true);
+        });
+
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
       }
     }
 
@@ -182,4 +276,3 @@
   </script>
 </body>
 </html>
-

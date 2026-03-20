@@ -155,6 +155,133 @@ router.post('/templates/:templateId', requireAuth, asyncHandler(async (req, res)
   });
 }));
 
+// Редактиране на собствен коментар (клиент)
+router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
+  const commentId = parseInt(req.params.id);
+  const { content, rating, type } = req.body; // type: 'platform' | 'template'
+
+  if (isNaN(commentId)) {
+    return res.status(400).json({
+      success: false,
+      error: { message: 'Невалидно ID на коментар', code: ErrorCodes.INVALID_VALUE }
+    });
+  }
+
+  if (!type || !['platform', 'template'].includes(type)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Типът на коментара е задължителен (platform или template)',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: [{ field: 'type', message: 'Типът е задължителен' }]
+      }
+    });
+  }
+
+  // Validate content
+  const validationErrors = validateCommentInput({ content, rating });
+  if (validationErrors.length > 0) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Моля, поправете грешките',
+        code: ErrorCodes.VALIDATION_ERROR,
+        details: validationErrors
+      }
+    });
+  }
+
+  const table = type === 'template' ? 'template_comments' : 'platform_comments';
+
+  // Verify ownership — user can only edit their own comment
+  const [rows] = await pool.query(
+    `SELECT id, user_id FROM ${table} WHERE id = ?`,
+    [commentId]
+  );
+
+  if (rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: { message: 'Коментарът не е намерен', code: ErrorCodes.NOT_FOUND }
+    });
+  }
+
+  // Admins can edit any comment; clients only their own
+  if (req.user.role !== 'admin' && rows[0].user_id !== req.user.id) {
+    return res.status(403).json({
+      success: false,
+      error: { message: 'Нямате права да редактирате този коментар', code: ErrorCodes.FORBIDDEN }
+    });
+  }
+
+  // After edit, reset to pending so admin re-approves (unless admin is editing)
+  const newStatus = req.user.role === 'admin' ? 'approved' : 'pending';
+
+  await pool.query(
+    `UPDATE ${table} SET content = ?, rating = ?, status = ? WHERE id = ?`,
+    [content.trim(), rating || null, newStatus, commentId]
+  );
+
+  res.json({
+    success: true,
+    message: req.user.role === 'admin'
+      ? 'Коментарът е обновен'
+      : 'Коментарът е обновен и изпратен за повторно одобрение'
+  });
+}));
+
+// Изтриване на собствен коментар от клиента (различно от admin delete)
+router.delete('/:id/own', requireAuth, asyncHandler(async (req, res) => {
+  const commentId = parseInt(req.params.id);
+
+  if (isNaN(commentId)) {
+    return res.status(400).json({
+      success: false,
+      error: { message: 'Невалидно ID на коментар', code: ErrorCodes.INVALID_VALUE }
+    });
+  }
+
+  // Try platform_comments first
+  const [pRows] = await pool.query(
+    'SELECT id, user_id FROM platform_comments WHERE id = ?',
+    [commentId]
+  );
+
+  if (pRows.length > 0) {
+    if (pRows[0].user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: { message: 'Нямате права да изтриете този коментар', code: ErrorCodes.FORBIDDEN }
+      });
+    }
+    await pool.query('DELETE FROM platform_comments WHERE id = ?', [commentId]);
+    return res.json({ success: true, message: 'Коментарът е изтрит' });
+  }
+
+  // Try template_comments
+  const [tRows] = await pool.query(
+    'SELECT id, user_id FROM template_comments WHERE id = ?',
+    [commentId]
+  );
+
+  if (tRows.length > 0) {
+    if (tRows[0].user_id !== req.user.id && req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        error: { message: 'Нямате права да изтриете този коментар', code: ErrorCodes.FORBIDDEN }
+      });
+    }
+    await pool.query('DELETE FROM template_comments WHERE id = ?', [commentId]);
+    return res.json({ success: true, message: 'Коментарът е изтрит' });
+  }
+
+  return res.status(404).json({
+    success: false,
+    error: { message: 'Коментарът не е намерен', code: ErrorCodes.NOT_FOUND }
+  });
+}));
+
+
 // Admin: Всички чакащи коментари
 router.get('/pending', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const [platformComments] = await pool.query(
