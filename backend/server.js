@@ -143,8 +143,9 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   
   // Enable keyboard input (only in TTY mode)
   if (process.stdin.isTTY) {
-    readline.emitKeypressEvents(process.stdin);
-    process.stdin.setRawMode(true);
+    // Enable keyboard input
+readline.emitKeypressEvents(process.stdin);
+process.stdin.setRawMode(true);
 
     process.stdin.on('keypress', (str, key) => {
       if (key.name === 'r') {
