@@ -59,8 +59,8 @@ const validateCarInput = (data, isUpdate = false) => {
 
 // Всички автомобили (публичен)
 router.get('/', asyncHandler(async (req, res) => {
-  const { brand, type, min_price, max_price, available, sort } = req.query;
-  
+  const { brand, type, min_price, max_price, available, sort, location, min_seats, max_seats, start_date, end_date } = req.query;
+
   let query = 'SELECT * FROM cars WHERE 1=1';
   const params = [];
 
@@ -82,6 +82,24 @@ router.get('/', asyncHandler(async (req, res) => {
     }
     query += ' AND type = ?';
     params.push(type);
+  }
+  if (location) {
+    query += ' AND location LIKE ?';
+    params.push(`%${location}%`);
+  }
+  if (min_seats) {
+    const minSeats = parseInt(min_seats);
+    if (!isNaN(minSeats) && minSeats > 0) {
+      query += ' AND seats >= ?';
+      params.push(minSeats);
+    }
+  }
+  if (max_seats) {
+    const maxSeats = parseInt(max_seats);
+    if (!isNaN(maxSeats) && maxSeats > 0) {
+      query += ' AND seats <= ?';
+      params.push(maxSeats);
+    }
   }
   if (min_price) {
     const minPrice = parseFloat(min_price);
@@ -115,6 +133,24 @@ router.get('/', asyncHandler(async (req, res) => {
     query += ' AND available = TRUE';
   }
 
+  // Filter by date availability - exclude cars with overlapping approved requests
+  if (start_date && end_date) {
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+
+    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
+      query += ` AND id NOT IN (
+        SELECT DISTINCT rc.car_id
+        FROM request_cars rc
+        JOIN rental_requests rr ON rc.request_id = rr.id
+        WHERE rr.status IN ('approved', 'pending')
+        AND rr.start_date <= ?
+        AND rr.end_date >= ?
+      )`;
+      params.push(end_date, start_date);
+    }
+  }
+
   // Сортиране
   switch (sort) {
     case 'price_asc':
@@ -128,6 +164,12 @@ router.get('/', asyncHandler(async (req, res) => {
       break;
     case 'brand':
       query += ' ORDER BY brand, model';
+      break;
+    case 'seats_asc':
+      query += ' ORDER BY seats ASC';
+      break;
+    case 'seats_desc':
+      query += ' ORDER BY seats DESC';
       break;
     default:
       query += ' ORDER BY id';

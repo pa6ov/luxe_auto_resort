@@ -12,6 +12,8 @@ const requestsRoutes = require('./routes/requests');
 const costsRoutes = require('./routes/costs');
 const contactsRoutes = require('./routes/contacts');
 const commentsRoutes = require('./routes/comments');
+const notificationsRoutes = require('./routes/notifications');
+const preferencesRoutes = require('./routes/preferences');
 
 // Import error handling utilities
 const { errorHandler, notFoundHandler } = require('./utils/errors');
@@ -40,6 +42,8 @@ app.use('/api/requests', requestsRoutes);
 app.use('/api/costs', costsRoutes);
 app.use('/api/contacts', contactsRoutes);
 app.use('/api/comments', commentsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/preferences', preferencesRoutes);
 
 // Admin Dashboard
 app.get('/api/admin/dashboard', require('./middleware/auth').requireAuth, require('./middleware/auth').requireAdmin, async (req, res) => {

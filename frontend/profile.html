@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Моят профил - Luxe Auto Resort</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .profile-section {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .avatar-upload {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+    .avatar-preview {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid var(--accent);
+    }
+    .avatar-placeholder {
+      width: 100px;
+      height: 100px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      color: white;
+      border: 3px solid var(--accent);
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+    .stat-card {
+      background: rgba(75, 136, 162, 0.1);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-card h4 {
+      color: var(--cta);
+      font-size: 1.5rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 25px;
+      border-bottom: 2px solid rgba(75, 136, 162, 0.2);
+    }
+    .tab {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      color: var(--text-light);
+      cursor: pointer;
+      font-size: 1rem;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s;
+    }
+    .tab:hover {
+      color: var(--cta);
+    }
+    .tab.active {
+      color: var(--cta);
+      border-bottom-color: var(--cta);
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .password-section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(75, 136, 162, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
+      <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
+      <nav>
+        <ul>
+          <li><a href="index.html">Начало</a></li>
+          <li><a href="cars.html">Автомобили</a></li>
+          <li><a href="templates.html">Шаблони</a></li>
+          <li><a href="comments.html">Мнения</a></li>
+          <li><a href="contacts.html">Контакти</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-header">
+    <div class="container">
+      <h1>Моят <span>профил</span></h1>
+      <p>Управление на личната информация</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="container">
+      <div class="profile-section">
+        <div class="tabs">
+          <button class="tab active" onclick="showTab('profile')">👤 Профил</button>
+          <button class="tab" onclick="showTab('stats')">📊 Статистика</button>
+          <button class="tab" onclick="showTab('security')">🔒 Сигурност</button>
+        </div>
+
+        <!-- Profile Tab -->
+        <div id="profileTab" class="tab-content active">
+          <div class="card">
+            <div class="avatar-upload">
+              <div id="avatarContainer">
+                <div class="avatar-placeholder" id="avatarPlaceholder">?</div>
+                <img id="avatarPreview" class="avatar-preview hidden" alt="Avatar">
+              </div>
+              <div>
+                <input type="file" id="avatarInput" accept="image/*" style="display:none">
+                <button class="btn btn-secondary" onclick="document.getElementById('avatarInput').click()">
+                  📷 Качи снимка
+                </button>
+                <p style="margin-top:10px; font-size:0.9rem; opacity:0.7;">Препоръчителен размер: 200x200px</p>
+              </div>
+            </div>
+
+            <form id="profileForm">
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+                <div class="form-group">
+                  <label for="firstName">Име *</label>
+                  <input type="text" id="firstName" name="first_name" required>
+                </div>
+                <div class="form-group">
+                  <label for="lastName">Фамилия *</label>
+                  <input type="text" id="lastName" name="last_name" required>
+                </div>
+                <div class="form-group">
+                  <label for="email">Имейл</label>
+                  <input type="email" id="email" disabled style="opacity:0.7;">
+                </div>
+                <div class="form-group">
+                  <label for="phone">Телефон</label>
+                  <input type="tel" id="phone" name="phone">
+                </div>
+              </div>
+              <div id="profileMessage"></div>
+              <button type="submit" class="btn btn-primary" style="margin-top:20px;">
+                💾 Запази промените
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Stats Tab -->
+        <div id="statsTab" class="tab-content">
+          <div class="card">
+            <h3 style="color:var(--cta); margin-bottom:20px;">📊 Моята статистика</h3>
+            <div class="stats-grid" id="userStats">
+              <div class="loading">Зареждане...</div>
+            </div>
+
+            <h3 style="color:var(--cta); margin:30px 0 20px;">📈 Разходи по месеци</h3>
+            <div id="monthlyStats">
+              <div class="loading">Зареждане...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Security Tab -->
+        <div id="securityTab" class="tab-content">
+          <div class="card">
+            <h3 style="color:var(--cta); margin-bottom:20px;">🔒 Смяна на парола</h3>
+            <form id="passwordForm">
+              <div class="form-group">
+                <label for="currentPassword">Текуща парола *</label>
+                <input type="password" id="currentPassword" name="current_password" required>
+              </div>
+              <div class="form-group">
+                <label for="newPassword">Нова парола *</label>
+                <input type="password" id="newPassword" name="new_password" required>
+                <small style="color:rgba(236,229,240,0.6);">Минимум 6 символа, поне 1 буква и 1 цифра</small>
+              </div>
+              <div class="form-group">
+                <label for="confirmPassword">Потвърди нова парола *</label>
+                <input type="password" id="confirmPassword" name="confirm_password" required>
+              </div>
+              <div id="passwordMessage"></div>
+              <button type="submit" class="btn btn-primary">
+                🔑 Промени паролата
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-bottom">
+        <p>&copy; 2024 Luxe Auto Resort. Всички права запазени.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // Check auth
+    if (!LuxeAuto.auth.isLoggedIn()) {
+      window.location.href = 'login.html?redirect=profile.html';
+    }
+
+    // Load user data
+    async function loadUserData() {
+      try {
+        const user = await LuxeAuto.api.get('/auth/me');
+
+        document.getElementById('firstName').value = user.first_name || '';
+        document.getElementById('lastName').value = user.last_name || '';
+        document.getElementById('email').value = user.email || '';
+        document.getElementById('phone').value = user.phone || '';
+
+        // Set avatar
+        if (user.avatar_url) {
+          document.getElementById('avatarPreview').src = user.avatar_url;
+          document.getElementById('avatarPreview').classList.remove('hidden');
+          document.getElementById('avatarPlaceholder').classList.add('hidden');
+        } else {
+          // Show initials
+          const initials = (user.first_name?.[0] || '') + (user.last_name?.[0] || '');
+          document.getElementById('avatarPlaceholder').textContent = initials || '?';
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+
+    // Load user stats
+    async function loadUserStats() {
+      const statsContainer = document.getElementById('userStats');
+      const monthlyContainer = document.getElementById('monthlyStats');
+
+      try {
+        // Get costs data
+        const costsData = await LuxeAuto.api.get('/costs/my');
+
+        const totalRequests = costsData.length || 0;
+        const totalSpent = costsData.reduce((sum, r) => sum + parseFloat(r.total_price), 0);
+
+        statsContainer.innerHTML = `
+          <div class="stat-card">
+            <h4>${totalRequests}</h4>
+            <p>Завършени заявки</p>
+          </div>
+          <div class="stat-card">
+            <h4>${ui.formatPrice(totalSpent)}</h4>
+            <p>Общо похарчено</p>
+          </div>
+          <div class="stat-card">
+            <h4>${costsData[0]?.cars?.length || 0}</h4>
+            <p>Последна заявка (коли)</p>
+          </div>
+        `;
+
+        // Group by month
+        const monthlyData = {};
+        costsData.forEach(r => {
+          const month = new Date(r.created_at).toLocaleDateString('bg-BG', { year: 'numeric', month: 'short' });
+          monthlyData[month] = (monthlyData[month] || 0) + parseFloat(r.total_price);
+        });
+
+        monthlyContainer.innerHTML = Object.entries(monthlyData)
+          .slice(0, 6)
+          .map(([month, amount]) => `
+            <div style="display:flex; justify-content:space-between; padding:10px; background:rgba(75,136,162,0.1); margin-bottom:8px; border-radius:5px;">
+              <span>${month}</span>
+              <strong style="color:var(--cta);">${ui.formatPrice(amount)}</strong>
+            </div>
+          `).join('') || '<p>Няма данни</p>';
+      } catch (error) {
+        statsContainer.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    // Avatar upload
+    document.getElementById('avatarInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        document.getElementById('avatarPreview').src = e.target.result;
+        document.getElementById('avatarPreview').classList.remove('hidden');
+        document.getElementById('avatarPlaceholder').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+
+      // In a real app, you would upload to a server here
+      // For demo, we'll use the data URL as avatar_url
+      try {
+        await LuxeAuto.api.put('/auth/profile', { avatar_url: reader.result });
+        ui.showSuccess(document.getElementById('profileMessage'), 'Снимката е качена');
+      } catch (error) {
+        // Silent fail for demo
+      }
+    });
+
+    // Profile form submit
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageDiv = document.getElementById('profileMessage');
+
+      try {
+        const data = {
+          first_name: document.getElementById('firstName').value,
+          last_name: document.getElementById('lastName').value,
+          phone: document.getElementById('phone').value
+        };
+
+        const updatedUser = await LuxeAuto.api.put('/auth/profile', data);
+
+        // Update local storage
+        const currentUser = LuxeAuto.auth.user;
+        currentUser.first_name = updatedUser.first_name;
+        currentUser.last_name = updatedUser.last_name;
+        localStorage.setItem('user', JSON.stringify(currentUser));
+
+        ui.showSuccess(messageDiv, 'Профилът е актуализиран успешно');
+      } catch (error) {
+        ui.showError(messageDiv, error.message);
+      }
+    });
+
+    // Password form submit
+    document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const messageDiv = document.getElementById('passwordMessage');
+
+      const newPassword = document.getElementById('newPassword').value;
+      const confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (newPassword !== confirmPassword) {
+        ui.showError(messageDiv, 'Новите пароли не съвпадат');
+        return;
+      }
+
+      try {
+        await LuxeAuto.api.put('/auth/change-password', {
+          current_password: document.getElementById('currentPassword').value,
+          new_password: newPassword
+        });
+
+        ui.showSuccess(messageDiv, 'Паролата е променена успешно');
+        document.getElementById('passwordForm').reset();
+      } catch (error) {
+        ui.showError(messageDiv, error.message);
+      }
+    });
+
+    // Tab switching
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+
+      event.target.classList.add('active');
+      document.getElementById(tab + 'Tab').classList.add('active');
+
+      if (tab === 'stats') {
+        loadUserStats();
+      }
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      updateHeaderForAuth();
+      loadUserData();
+    });
+  </script>
+</body>
+</html>

@@ -56,25 +56,51 @@ const VALID_STATUSES = ['pending', 'approved', 'rejected', 'completed', 'cancell
 
 // Създаване на заявка за наем
 router.post('/', requireAuth, asyncHandler(async (req, res) => {
-  const { template_id, car_ids, start_date, end_date, notes } = req.body;
+  const { template_id, car_ids, start_date, end_date, notes, contact_person_id, is_draft } = req.body;
 
-  // Validate input
-  const validationErrors = validateRequestInput(req.body);
-  if (validationErrors.length > 0) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: 'Моля, поправете грешките във формата',
-        code: ErrorCodes.VALIDATION_ERROR,
-        details: validationErrors
+  // Validate input (skip for drafts)
+  if (!is_draft) {
+    const validationErrors = validateRequestInput(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Моля, поправете грешките във формата',
+          code: ErrorCodes.VALIDATION_ERROR,
+          details: validationErrors
+        }
+      });
+    }
+  }
+
+  // For drafts, we just save minimal data
+  if (is_draft) {
+    const [result] = await pool.query(
+      'INSERT INTO rental_requests (user_id, template_id, start_date, end_date, total_price, notes, contact_person_id, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [req.user.id, template_id || null, start_date || null, end_date || null, 0, notes || null, contact_person_id || null, 'draft']
+    );
+
+    // Add cars to request if provided
+    if (car_ids && Array.isArray(car_ids) && car_ids.length > 0) {
+      for (const car_id of car_ids) {
+        await pool.query(
+          'INSERT INTO request_cars (request_id, car_id) VALUES (?, ?)',
+          [result.insertId, car_id]
+        );
       }
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: 'Черновата е запазена успешно',
+      id: result.insertId
     });
   }
 
   // Parse dates
   const start = new Date(start_date);
   const end = new Date(end_date);
-  
+
   // Get cars and verify availability
   const [cars] = await pool.query(
     'SELECT * FROM cars WHERE id IN (?) AND available = TRUE',
@@ -113,8 +139,8 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
   // Create request
   const [result] = await pool.query(
-    'INSERT INTO rental_requests (user_id, template_id, start_date, end_date, total_price, notes) VALUES (?, ?, ?, ?, ?, ?)',
-    [req.user.id, template_id || null, start_date, end_date, totalPrice.toFixed(2), notes || null]
+    'INSERT INTO rental_requests (user_id, template_id, contact_person_id, start_date, end_date, total_price, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    [req.user.id, template_id || null, contact_person_id || null, start_date, end_date, totalPrice.toFixed(2), notes || null, 'pending']
   );
 
   // Add cars to request
@@ -125,7 +151,22 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     );
   }
 
-  res.status(201).json({ 
+  // Create notification for contact person if set
+  if (contact_person_id) {
+    const [contactUser] = await pool.query(
+      'SELECT first_name, last_name FROM users WHERE id = ?',
+      [contact_person_id]
+    );
+    if (contactUser.length > 0) {
+      await pool.query(
+        'INSERT INTO notifications (user_id, type, title, message, related_id) VALUES (?, ?, ?, ?, ?)',
+        [contact_person_id, 'request_assigned', 'Нова заявка като контактно лице',
+         `Бяхте добавен като контактно лице към заявка от ${req.user.first_name || req.user.email}`, result.insertId]
+      );
+    }
+  }
+
+  res.status(201).json({
     success: true,
     message: 'Заявката е създадена успешно',
     id: result.insertId,
@@ -135,20 +176,30 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
 
 // Моите заявки (клиент)
 router.get('/my', requireAuth, asyncHandler(async (req, res) => {
-  const [requests] = await pool.query(
-    `SELECT rr.*, t.name as template_name 
-     FROM rental_requests rr 
-     LEFT JOIN templates t ON rr.template_id = t.id 
-     WHERE rr.user_id = ? 
-     ORDER BY rr.created_at DESC`,
-    [req.user.id]
-  );
+  const { include_drafts } = req.query;
+
+  let query = `
+    SELECT rr.*, t.name as template_name,
+           cp.first_name as contact_first_name, cp.last_name as contact_last_name, cp.email as contact_email, cp.phone as contact_phone
+    FROM rental_requests rr
+    LEFT JOIN templates t ON rr.template_id = t.id
+    LEFT JOIN users cp ON rr.contact_person_id = cp.id
+    WHERE rr.user_id = ?
+  `;
+
+  if (include_drafts !== 'true') {
+    query += ` AND rr.status != 'draft'`;
+  }
+
+  query += ` ORDER BY rr.created_at DESC`;
+
+  const [requests] = await pool.query(query, [req.user.id]);
 
   // Add cars to each request
   for (const request of requests) {
     const [cars] = await pool.query(
-      `SELECT c.* FROM cars c 
-       JOIN request_cars rc ON c.id = rc.car_id 
+      `SELECT c.* FROM cars c
+       JOIN request_cars rc ON c.id = rc.car_id
        WHERE rc.request_id = ?`,
       [request.id]
     );
@@ -159,6 +210,146 @@ router.get('/my', requireAuth, asyncHandler(async (req, res) => {
     success: true,
     data: requests,
     count: requests.length
+  });
+}));
+
+// Чернови на заявки (клиент)
+router.get('/drafts', requireAuth, asyncHandler(async (req, res) => {
+  const [drafts] = await pool.query(
+    `SELECT rr.*, t.name as template_name
+     FROM rental_requests rr
+     LEFT JOIN templates t ON rr.template_id = t.id
+     WHERE rr.user_id = ? AND rr.status = 'draft'
+     ORDER BY rr.updated_at DESC`,
+    [req.user.id]
+  );
+
+  // Add cars to each draft
+  for (const draft of drafts) {
+    const [cars] = await pool.query(
+      `SELECT c.* FROM cars c
+       JOIN request_cars rc ON c.id = rc.car_id
+       WHERE rc.request_id = ?`,
+      [draft.id]
+    );
+    draft.cars = cars;
+  }
+
+  res.json({
+    success: true,
+    data: drafts,
+    count: drafts.length
+  });
+}));
+
+// Актуализиране на чернова
+router.put('/:id', requireAuth, asyncHandler(async (req, res) => {
+  const requestId = parseInt(req.params.id);
+
+  if (isNaN(requestId)) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: 'Невалидно ID на заявка',
+        code: ErrorCodes.INVALID_VALUE
+      }
+    });
+  }
+
+  // Check if request exists and belongs to user and is draft
+  const [requests] = await pool.query(
+    'SELECT * FROM rental_requests WHERE id = ? AND user_id = ? AND status = ?',
+    [requestId, req.user.id, 'draft']
+  );
+
+  if (requests.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: 'Черновата не е намерена или вече е изпратена',
+        code: ErrorCodes.NOT_FOUND
+      }
+    });
+  }
+
+  const { template_id, car_ids, start_date, end_date, notes, contact_person_id, submit } = req.body;
+
+  // If submitting, validate all required fields
+  if (submit) {
+    const validationErrors = validateRequestInput(req.body);
+    if (validationErrors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Моля, поправете грешките във формата',
+          code: ErrorCodes.VALIDATION_ERROR,
+          details: validationErrors
+        }
+      });
+    }
+  }
+
+  // Update the draft
+  let totalPrice = 0;
+  if (submit && start_date && end_date && car_ids) {
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+
+    // Get car prices
+    const [cars] = await pool.query('SELECT price_per_day FROM cars WHERE id IN (?)', [car_ids]);
+    let basePrice = cars.reduce((sum, c) => sum + parseFloat(c.price_per_day), 0);
+
+    // Apply template discount
+    let discount = 0;
+    if (template_id) {
+      const [templates] = await pool.query('SELECT discount_percent FROM templates WHERE id = ?', [template_id]);
+      if (templates.length > 0) {
+        discount = templates[0].discount_percent || 0;
+      }
+    }
+
+    totalPrice = basePrice * days * (1 - discount / 100);
+  }
+
+  await pool.query(
+    `UPDATE rental_requests SET
+      template_id = ?, contact_person_id = ?, start_date = ?, end_date = ?,
+      notes = ?, total_price = ?, status = ?
+     WHERE id = ?`,
+    [
+      template_id || null,
+      contact_person_id || null,
+      start_date || null,
+      end_date || null,
+      notes || null,
+      totalPrice.toFixed(2),
+      submit ? 'pending' : 'draft',
+      requestId
+    ]
+  );
+
+  // Update cars if provided
+  if (car_ids && Array.isArray(car_ids)) {
+    await pool.query('DELETE FROM request_cars WHERE request_id = ?', [requestId]);
+    for (const car_id of car_ids) {
+      await pool.query('INSERT INTO request_cars (request_id, car_id) VALUES (?, ?)', [requestId, car_id]);
+    }
+  }
+
+  if (submit && contact_person_id) {
+    await pool.query(
+      'INSERT INTO notifications (user_id, type, title, message, related_id) VALUES (?, ?, ?, ?, ?)',
+      [contact_person_id, 'request_assigned', 'Нова заявка като контактно лице',
+       `Бяхте добавен като контактно лице към заявка от ${req.user.first_name || req.user.email}`, requestId]
+    );
+  }
+
+  res.json({
+    success: true,
+    message: submit ? 'Заявката е изпратена успешно' : 'Черновата е запазена',
+    id: requestId,
+    total_price: submit ? totalPrice.toFixed(2) : undefined
   });
 }));
 
