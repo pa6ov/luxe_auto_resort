@@ -47,16 +47,17 @@
               <option value="suv">SUV</option>
               <option value="coupe">Купе</option>
               <option value="minivan">Миниван</option>
+              <option value="truck">Камион</option>
               <option value="sport">Спортен</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="filterMinPrice">Мин. цена</label>
-            <input type="number" id="filterMinPrice" placeholder="0">
+            <label for="filterMinPrice">Мин. цена (€/ден)</label>
+            <input type="number" id="filterMinPrice" placeholder="0" min="0">
           </div>
           <div class="form-group">
-            <label for="filterMaxPrice">Макс. цена</label>
-            <input type="number" id="filterMaxPrice" placeholder="500">
+            <label for="filterMaxPrice">Макс. цена (€/ден)</label>
+            <input type="number" id="filterMaxPrice" placeholder="500" min="0">
           </div>
           <div class="form-group">
             <label for="filterSort">Сортиране</label>
@@ -75,11 +76,31 @@
               <option value="">Всички</option>
             </select>
           </div>
-          <div class="form-group">
-            <button class="btn btn-primary" onclick="applyFilters()" style="width:100%">Филтрирай</button>
-          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="applyFilters()" style="flex:1; min-width:120px;">
+            🔍 Филтрирай
+          </button>
+          <button class="btn btn-outline" onclick="resetFilters()" style="flex:1; min-width:120px;">
+            ✕ Изчисти
+          </button>
         </div>
       </div>
+
+      <!-- Results info bar -->
+      <div id="resultsInfo" style="
+        display:none;
+        margin-bottom:15px;
+        padding:10px 15px;
+        background:rgba(75,136,162,0.1);
+        border-radius:8px;
+        border-left:3px solid var(--accent);
+        font-size:0.95rem;
+        color:rgba(236,229,240,0.85);
+      "></div>
+
+      <!-- Active filters bar -->
+      <div id="activeFilters" style="display:none; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:8px;"></div>
 
       <!-- Cars Grid -->
       <div id="carsGrid" class="car-grid">
@@ -121,83 +142,217 @@
 
   <script src="js/main.js"></script>
   <script>
-    // Get URL params and apply filters
-    function getFilters() {
-      const params = new URLSearchParams(window.location.search);
+    // ─── Read filter values ONLY from the input elements ───────────────────────
+    function getFiltersFromInputs() {
       return {
-        brand: params.get('brand') || document.getElementById('filterBrand').value,
-        type: params.get('type') || document.getElementById('filterType').value,
-        min_price: params.get('min_price') || document.getElementById('filterMinPrice').value,
-        max_price: params.get('max_price') || document.getElementById('filterMaxPrice').value,
-        sort: params.get('sort') || document.getElementById('filterSort').value,
-        available: params.get('available') || document.getElementById('filterAvailable').value
+        brand:     document.getElementById('filterBrand').value.trim(),
+        type:      document.getElementById('filterType').value,
+        min_price: document.getElementById('filterMinPrice').value.trim(),
+        max_price: document.getElementById('filterMaxPrice').value.trim(),
+        sort:      document.getElementById('filterSort').value,
+        available: document.getElementById('filterAvailable').value
       };
     }
 
-    function applyFilters() {
-      const filters = getFilters();
-      let url = 'cars.html?';
-      
-      if (filters.brand) url += `brand=${encodeURIComponent(filters.brand)}&`;
-      if (filters.type) url += `type=${filters.type}&`;
-      if (filters.min_price) url += `min_price=${filters.min_price}&`;
-      if (filters.max_price) url += `max_price=${filters.max_price}&`;
-      if (filters.sort) url += `sort=${filters.sort}&`;
-      if (filters.available) url += `available=${filters.available}`;
-      
-      window.location.href = url;
-    }
-
-    // Populate filter fields from URL
-    function populateFilters() {
+    // ─── Populate input elements from URL search params ────────────────────────
+    function populateFiltersFromURL() {
       const params = new URLSearchParams(window.location.search);
-      
-      if (params.has('brand')) document.getElementById('filterBrand').value = params.get('brand');
-      if (params.has('type')) document.getElementById('filterType').value = params.get('type');
-      if (params.has('min_price')) document.getElementById('filterMinPrice').value = params.get('min_price');
-      if (params.has('max_price')) document.getElementById('filterMaxPrice').value = params.get('max_price');
-      if (params.has('sort')) document.getElementById('filterSort').value = params.get('sort');
+      if (params.has('brand'))     document.getElementById('filterBrand').value     = params.get('brand');
+      if (params.has('type'))      document.getElementById('filterType').value      = params.get('type');
+      if (params.has('min_price')) document.getElementById('filterMinPrice').value  = params.get('min_price');
+      if (params.has('max_price')) document.getElementById('filterMaxPrice').value  = params.get('max_price');
+      if (params.has('sort'))      document.getElementById('filterSort').value      = params.get('sort');
       if (params.has('available')) document.getElementById('filterAvailable').value = params.get('available');
     }
 
-    // Load cars
-    async function loadCars() {
+    // ─── Build a clean query string from an object, skipping empty values ──────
+    function buildQueryString(filters) {
+      const params = new URLSearchParams();
+      if (filters.brand)     params.set('brand',     filters.brand);
+      if (filters.type)      params.set('type',      filters.type);
+      if (filters.min_price) params.set('min_price', filters.min_price);
+      if (filters.max_price) params.set('max_price', filters.max_price);
+      if (filters.sort)      params.set('sort',      filters.sort);
+      if (filters.available) params.set('available', filters.available);
+      return params.toString();
+    }
+
+    // ─── Update the browser URL bar without reloading the page ────────────────
+    function updateURL(filters) {
+      const qs = buildQueryString(filters);
+      const newURL = window.location.pathname + (qs ? '?' + qs : '');
+      window.history.replaceState(null, '', newURL);
+    }
+
+    // ─── Show active filter tags below the filter bar ──────────────────────────
+    const TYPE_LABELS = {
+      sedan: 'Седан', suv: 'SUV', coupe: 'Купе',
+      minivan: 'Миниван', truck: 'Камион', sport: 'Спортен'
+    };
+    const SORT_LABELS = {
+      price_asc: 'Цена ↑', price_desc: 'Цена ↓',
+      year_desc: 'Година (нови)', brand: 'Марка А-Я'
+    };
+
+    function renderActiveFilters(filters) {
+      const bar = document.getElementById('activeFilters');
+      const tags = [];
+
+      if (filters.brand)
+        tags.push({ label: `Марка: ${filters.brand}`, key: 'brand' });
+      if (filters.type)
+        tags.push({ label: `Тип: ${TYPE_LABELS[filters.type] || filters.type}`, key: 'type' });
+      if (filters.min_price)
+        tags.push({ label: `Мин. цена: €${filters.min_price}`, key: 'min_price' });
+      if (filters.max_price)
+        tags.push({ label: `Макс. цена: €${filters.max_price}`, key: 'max_price' });
+      if (filters.sort)
+        tags.push({ label: `Сортиране: ${SORT_LABELS[filters.sort] || filters.sort}`, key: 'sort' });
+      if (filters.available === 'true')
+        tags.push({ label: 'Само налични', key: null }); // always-on, no remove
+
+      if (tags.length === 0) {
+        bar.style.display = 'none';
+        return;
+      }
+
+      bar.style.display = 'flex';
+      bar.innerHTML = tags.map(t => `
+        <span style="
+          display:inline-flex; align-items:center; gap:6px;
+          background:rgba(75,136,162,0.2); border:1px solid rgba(75,136,162,0.4);
+          padding:4px 12px; border-radius:20px; font-size:0.85rem;
+        ">
+          ${t.label}
+          ${t.key ? `<button onclick="removeFilter('${t.key}')" style="
+            background:none; border:none; color:var(--cta); cursor:pointer;
+            font-size:1rem; line-height:1; padding:0; margin-left:2px;
+          ">×</button>` : ''}
+        </span>
+      `).join('');
+    }
+
+    // ─── Remove a single filter tag ────────────────────────────────────────────
+    function removeFilter(key) {
+      const el = document.getElementById('filter' + key.charAt(0).toUpperCase() + key.slice(1).replace('_p', 'P').replace('_', ''));
+      // Map key to element id
+      const idMap = {
+        brand: 'filterBrand', type: 'filterType',
+        min_price: 'filterMinPrice', max_price: 'filterMaxPrice',
+        sort: 'filterSort'
+      };
+      const targetId = idMap[key];
+      if (targetId) {
+        const el = document.getElementById(targetId);
+        el.value = '';
+      }
+      applyFilters();
+    }
+
+    // ─── Reset all filters to default ─────────────────────────────────────────
+    function resetFilters() {
+      document.getElementById('filterBrand').value     = '';
+      document.getElementById('filterType').value      = '';
+      document.getElementById('filterMinPrice').value  = '';
+      document.getElementById('filterMaxPrice').value  = '';
+      document.getElementById('filterSort').value      = '';
+      document.getElementById('filterAvailable').value = 'true';
+      applyFilters();
+    }
+
+    // ─── Apply filters: read inputs → update URL → reload grid ────────────────
+    function applyFilters() {
+      const filters = getFiltersFromInputs();
+
+      // Validate price range
+      const min = parseFloat(filters.min_price);
+      const max = parseFloat(filters.max_price);
+      if (filters.min_price && filters.max_price && !isNaN(min) && !isNaN(max) && min > max) {
+        document.getElementById('filterMinPrice').style.borderColor = 'var(--danger)';
+        document.getElementById('filterMaxPrice').style.borderColor = 'var(--danger)';
+        document.getElementById('resultsInfo').style.display = 'block';
+        document.getElementById('resultsInfo').innerHTML =
+          '<span style="color:var(--danger);">⚠️ Минималната цена не може да е по-голяма от максималната.</span>';
+        return;
+      }
+      document.getElementById('filterMinPrice').style.borderColor = '';
+      document.getElementById('filterMaxPrice').style.borderColor = '';
+
+      updateURL(filters);
+      renderActiveFilters(filters);
+      loadCars(filters);
+    }
+
+    // ─── Load and render cars from API ────────────────────────────────────────
+    async function loadCars(filters) {
       const container = document.getElementById('carsGrid');
-      const filters = getFilters();
-      
-      let url = '/cars?';
-      if (filters.brand) url += `brand=${encodeURIComponent(filters.brand)}&`;
-      if (filters.type) url += `type=${filters.type}&`;
-      if (filters.min_price) url += `min_price=${filters.min_price}&`;
-      if (filters.max_price) url += `max_price=${filters.max_price}&`;
-      if (filters.sort) url += `sort=${filters.sort}&`;
-      if (filters.available) url += `available=${filters.available}`;
-      
+      const resultsInfo = document.getElementById('resultsInfo');
+
+      container.innerHTML = '<div class="loading">Зареждане на автомобили...</div>';
+      resultsInfo.style.display = 'none';
+
+      // If filters not passed (initial load), read from inputs
+      if (!filters) filters = getFiltersFromInputs();
+
+      const qs = buildQueryString(filters);
+      const endpoint = '/cars' + (qs ? '?' + qs : '');
+
       try {
-        const cars = await LuxeAuto.api.get(url);
-        
+        const cars = await LuxeAuto.api.get(endpoint);
+
+        // Show results count
+        resultsInfo.style.display = 'block';
         if (cars.length === 0) {
+          resultsInfo.innerHTML = '🔍 Няма намерени автомобили по зададените критерии.';
           container.innerHTML = `
-            <div class="empty-state" style="grid-column: 1/-1;">
+            <div class="empty-state" style="grid-column:1/-1;">
               <h3>Няма намерени автомобили</h3>
-              <p>Опитайте с различни филтри</p>
+              <p>Опитайте с различни филтри или <a href="#" onclick="resetFilters(); return false;">изчистете всички филтри</a>.</p>
             </div>
           `;
           return;
         }
-        
+
+        const availableCount = cars.filter(c => c.available).length;
+        resultsInfo.innerHTML = `
+          Намерени <strong>${cars.length}</strong> автомобила
+          ${filters.available === 'true' ? '' : ` &nbsp;·&nbsp; <span style="color:var(--success);">${availableCount} налични</span>`}
+        `;
+
         container.innerHTML = cars.map(car => LuxeAuto.createCarCard(car)).join('');
+
       } catch (error) {
-        container.innerHTML = `<div class="alert alert-error" style="grid-column: 1/-1;">${error.message}</div>`;
+        resultsInfo.style.display = 'none';
+        container.innerHTML = `
+          <div class="alert alert-error" style="grid-column:1/-1;">
+            ${error.message}
+          </div>
+        `;
       }
     }
 
+    // ─── Allow pressing Enter in text/number inputs to trigger filter ─────────
+    function setupEnterKey() {
+      ['filterBrand', 'filterMinPrice', 'filterMaxPrice'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') applyFilters();
+        });
+      });
+      // Selects: apply immediately on change
+      ['filterType', 'filterSort', 'filterAvailable'].forEach(id => {
+        document.getElementById(id).addEventListener('change', applyFilters);
+      });
+    }
+
+    // ─── Init ──────────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
-      populateFilters();
-      loadCars();
+      populateFiltersFromURL();       // fill inputs from URL params
+      setupEnterKey();                // wire up keyboard & change events
+      const filters = getFiltersFromInputs();
+      renderActiveFilters(filters);   // show any pre-applied filter tags
+      loadCars(filters);              // fetch cars immediately
     });
   </script>
 </body>
 </html>
-

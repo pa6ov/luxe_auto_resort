@@ -51,16 +51,17 @@
               <option value="suv">SUV</option>
               <option value="coupe">Купе</option>
               <option value="minivan">Миниван</option>
+              <option value="truck">Камион</option>
               <option value="sport">Спортен</option>
             </select>
           </div>
           <div class="form-group">
             <label for="searchMinPrice">Мин. цена</label>
-            <input type="number" id="searchMinPrice" placeholder="0">
+            <input type="number" id="searchMinPrice" placeholder="0" min="0">
           </div>
           <div class="form-group">
             <label for="searchMaxPrice">Макс. цена</label>
-            <input type="number" id="searchMaxPrice" placeholder="500">
+            <input type="number" id="searchMaxPrice" placeholder="500" min="0">
           </div>
           <div class="form-group">
             <button class="btn btn-primary" onclick="searchCars()" style="width:100%">Търси</button>
@@ -192,29 +193,38 @@
       }
     }
 
-    // Search cars
-    async function searchCars() {
-      const brand = document.getElementById('searchBrand').value;
-      const type = document.getElementById('searchType').value;
-      const minPrice = document.getElementById('searchMinPrice').value;
-      const maxPrice = document.getElementById('searchMaxPrice').value;
-      
-      let url = '/cars?available=true';
-      if (brand) url += `&brand=${encodeURIComponent(brand)}`;
-      if (type) url += `&type=${type}`;
-      if (minPrice) url += `&min_price=${minPrice}`;
-      if (maxPrice) url += `&max_price=${maxPrice}`;
-      
-      window.location.href = `cars.html${url}`;
+    // ─── FIXED: build query params correctly, never concatenate the API path ───
+    function searchCars() {
+      const brand    = document.getElementById('searchBrand').value.trim();
+      const type     = document.getElementById('searchType').value;
+      const minPrice = document.getElementById('searchMinPrice').value.trim();
+      const maxPrice = document.getElementById('searchMaxPrice').value.trim();
+
+      // Use URLSearchParams so the result is always "cars.html?key=value"
+      // and never "cars.html/cars?key=value"
+      const params = new URLSearchParams();
+      params.set('available', 'true');
+      if (brand)    params.set('brand',     brand);
+      if (type)     params.set('type',      type);
+      if (minPrice) params.set('min_price', minPrice);
+      if (maxPrice) params.set('max_price', maxPrice);
+
+      window.location.href = 'cars.html?' + params.toString();
     }
 
-    // Initialize
+    // Allow pressing Enter in search inputs
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
       loadFeaturedCars();
       loadTemplates();
+
+      ['searchBrand', 'searchMinPrice', 'searchMaxPrice'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') searchCars();
+        });
+      });
+      document.getElementById('searchType').addEventListener('change', searchCars);
     });
   </script>
 </body>
 </html>
-
