@@ -1,91 +1,62 @@
-# Project Requirements Prompt
+# 🛠️ Luxe Auto Resort - Project Enhancements
 
-## Project Overview
-
-Design and develop a web-based vehicle request management platform. The system must support multiple user roles, cost tracking, fleet selection, and collaboration features.
+This document tracks the implementation of fixed template-based booking dates and the overhaul of the data validation system for both users and administrators.
 
 ---
 
-## Requirements Checklist
+## 📅 Task 1: Fixed Calendar Template Logic
+*Goal: Restrict date selection based on the selected "Template Pack" (Weekend vs. Business).*
 
-### 1. Technology Analysis
-- [ ] Conduct an analysis of technologies suitable for developing web-based applications
-- [ ] Evaluate frontend frameworks (e.g., React, Vue, Angular)
-- [ ] Evaluate backend frameworks (e.g., Node.js/Express, Django, Laravel)
-- [ ] Assess database options (e.g., PostgreSQL, MySQL, MongoDB)
-- [ ] Review authentication and authorization solutions
-- [ ] Document final technology stack decision with justifications
+### **[ ] Frontend: Dynamic Date Picker Restrictions**
+- [ ] **State Integration:** Ensure the DatePicker component listens to the `template_id` or `package_type` state.
+- [ ] **Weekend Pack Logic:**
+    - Disable all days except Friday, Saturday, and Sunday.
+    - If a user picks Friday, automatically set the checkout to Sunday (or enforce a 2-night minimum).
+- [ ] **Business Pack Logic:**
+    - Disable Saturday and Sunday.
+    - Restrict the range to Monday–Friday only.
+- [ ] **General Logic:** If no pack is selected, enforce standard rules (no past dates, no same-day bookings if applicable).
+- [ ] **UI Feedback:** Gray out invalid dates in the calendar and add a tooltip/label explaining the restriction (e.g., *"Business Pack: Mon-Fri only"*).
 
----
-
-### 2. User Roles & Profiles
-- [ ] Implement **Administrator** profile with full system access
-  - Manage users, vehicles, templates, and platform settings
-- [ ] Implement **User** profile with standard access
-  - View, create, and manage personal requests
-- [ ] Role-based access control (RBAC) for all features
-- [ ] Profile management (edit personal info, change password, upload avatar)
-
----
-
-### 3. Cost Calculation
-- [ ] Ability to calculate total costs per user
-  - Cost breakdown by request, vehicle type, and time period
-- [ ] Display cost summaries on user dashboard
-- [ ] Admin view of costs across all users
-- [ ] Export cost reports (CSV / PDF)
+### **[ ] Backend: Server-Side Template Enforcement**
+- [ ] Create a helper function `validateTemplateDates(checkIn, checkOut, templateType)` to re-verify dates before saving to the DB.
+- [ ] Reject any "Weekend" request where the check-in is not a Friday or check-out is not a Sunday.
+- [ ] Reject any "Business" request that overlaps with a weekend.
 
 ---
 
-### 4. Contact Person Linking
-- [ ] Ability to link a contact person to a user or request
-  - Search and assign a contact from existing users or an external directory
-- [ ] Display contact person details (name, phone, email) on the request view
-- [ ] Allow updating or removing a linked contact person
+## 🔐 Task 2: Robust Data Validation
+*Goal: Implement a "Trust No One" policy for incoming data to prevent database errors and security vulnerabilities.*
+
+### **[ ] User Input Validation (Frontend)**
+- [ ] **Real-time Form Validation:** Implement library-based validation (e.g., **Zod**, **Yup**, or **Joi**) on all forms.
+- [ ] **Sanitization:** Trim whitespace and escape special characters in text inputs (Name, Email, Notes).
+- [ ] **Phone/Email Regex:** Ensure strict formatting for contact information.
+
+### **[ ] API/Backend Security & Integrity**
+- [ ] **Schema Validation:** Define strict schemas for the `POST /booking` and `PUT /booking` endpoints.
+- [ ] **Overlap Check:** Implement a database query to check if the car/resort is already booked for the requested dates *before* confirming the new entry.
+- [ ] **Price Integrity:** Ensure the `total_price` is calculated on the server, not passed from the frontend (to prevent price manipulation).
+
+### **[ ] Administrator Dashboard Validation**
+- [ ] **Edit Constraints:** Admins editing a booking must still follow template rules (unless an "Override" checkbox is used).
+- [ ] **Conflict Resolution:** If an Admin changes a car's status to "Under Maintenance," the system should alert or block overlapping existing bookings.
+- [ ] **Audit Trail:** Log which administrator edited which record and what the previous values were.
 
 ---
 
-### 5. Request Creation via Template
-- [ ] Ability to create a request using a pre-defined template
-  - Select from available templates when initiating a request
-- [ ] Vehicle range selection within the request form
-  - Filter and pick one or multiple vehicles
-- [ ] Time options selection
-  - Choose start date/time, end date/time, and duration
-- [ ] Save drafts and submit completed requests for approval
+## 🚀 Task 3: UX & Error Handling
+- [ ] **Dynamic Error Messages:** Instead of "Invalid Input," return specific messages like:
+    - *"The Business Pack must end by Friday 18:00."*
+    - *"Selected dates overlap with an existing booking for the Porsche 911."*
+- [ ] **Loading States:** Add spinners/skeletons while the backend validates availability to prevent double-booking from "click-spamming."
 
 ---
 
-### 6. Vehicle Filtering & Sorting
-- [ ] Ability to filter vehicles by:
-  - Type / category
-  - Availability (date & time range)
-  - Capacity / seats
-  - Location
-  - Cost range
-- [ ] Ability to sort vehicles by:
-  - Name / ID
-  - Availability
-  - Cost (ascending / descending)
-  - Type
-- [ ] Persist filter/sort preferences per session
-
----
-
-### 7. Comments & Collaboration
-- [ ] Ability to comment on the platform (general/admin announcements)
-- [ ] Ability to comment on individual templates
-  - Add, edit, delete own comments
-  - Admin can moderate all comments
-- [ ] Real-time or refresh-based comment updates
-- [ ] Notification on new comments related to a user's requests or templates
-
----
-
-## Deliverables
-
-- [ ] Technology analysis document
-- [ ] Database schema / ERD
-- [ ] UI/UX wireframes for all major screens
-- [ ] Implemented and tested web application
-- [ ] Deployment guide and documentation
+## 📂 Suggested Files for Modification
+| Feature | Target File (Example) |
+| :--- | :--- |
+| **Frontend UI** | `src/components/Booking/Calendar.jsx` |
+| **Validation Schema** | `src/utils/validationSchema.js` |
+| **Backend Logic** | `api/services/booking_service.py` |
+| **Admin Panel** | `src/pages/Admin/EditBooking.jsx` |
