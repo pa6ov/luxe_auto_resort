@@ -682,6 +682,209 @@
     document.addEventListener('DOMContentLoaded', () => {
       loadDashboard();
     });
+
+    (function patchCarFormSubmit() {
+  const originalForm = document.getElementById('carForm');
+  if (!originalForm) return;
+
+  // Remove old listener by cloning
+  const newForm = originalForm.cloneNode(true);
+  originalForm.parentNode.replaceChild(newForm, originalForm);
+
+  newForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id       = document.getElementById('carId').value;
+    const submitBtn = newForm.querySelector('button[type="submit"]');
+
+    // Loading guard (Task 3)
+    submitBtn.disabled    = true;
+    submitBtn.textContent = 'Запазване...';
+
+    const data = {
+      brand:        document.getElementById('carBrand').value,
+      model:        document.getElementById('carModel').value,
+      year:         parseInt(document.getElementById('carYear').value),
+      price_per_day:parseFloat(document.getElementById('carPrice').value),
+      type:         document.getElementById('carType').value,
+      seats:        parseInt(document.getElementById('carSeats').value),
+      transmission: document.getElementById('carTransmission').value,
+      fuel_type:    document.getElementById('carFuel').value,
+      image_url:    document.getElementById('carImage').value,
+      description:  document.getElementById('carDesc').value,
+      available:    document.getElementById('carAvailable').checked
+    };
+
+    try {
+      let result;
+      if (id) {
+        result = await LuxeAuto.api.put(`/cars/${id}`, data);
+      } else {
+        result = await LuxeAuto.api.post('/cars', data);
+      }
+
+      // Task 2 — conflict resolution: warn admin about active bookings
+      if (result && result.conflicting_bookings && result.conflicting_bookings.length > 0) {
+        const bookingList = result.conflicting_bookings
+          .map(b => `• Заявка #${b.request_id} (${b.first_name} ${b.last_name}) — ${formatDateShort(b.start_date)} до ${formatDateShort(b.end_date)}`)
+          .join('\n');
+
+        const proceed = confirm(
+          `⚠️ ${result.warning}\n\n${bookingList}\n\n` +
+          'Желаете ли да продължите? Клиентите трябва да бъдат уведомени ръчно.'
+        );
+        // Car is already saved; this is an informational dialog only.
+        if (proceed) {
+          showToast('Автомобилът е запазен. Моля, уведомете засегнатите клиенти.', 'warning');
+        }
+      }
+
+      closeCarModal();
+      loadCars();
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      submitBtn.disabled    = false;
+      submitBtn.textContent = 'Запази';
+    }
+  });
+})();
+
+// ── 2. Audit log section ────────────────────────────────────────────────────
+
+// Inject nav link
+(function addAuditNavLink() {
+  const sidebar = document.querySelector('.admin-sidebar ul');
+  if (!sidebar) return;
+  const li = document.createElement('li');
+  li.innerHTML = `<a href="#" onclick="showAdminSection('audit')">📋 Одит лог</a>`;
+  sidebar.appendChild(li);
+})();
+
+// Inject section HTML
+(function addAuditSection() {
+  const container = document.querySelector('section .container');
+  if (!container) return;
+
+  const div = document.createElement('div');
+  div.id        = 'audit';
+  div.className = 'admin-section';
+  div.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <h2>📋 Одит лог</h2>
+      <select id="auditTableFilter" onchange="loadAuditLog()">
+        <option value="">Всички таблици</option>
+        <option value="rental_requests">Заявки</option>
+        <option value="cars">Автомобили</option>
+      </select>
+    </div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Администратор</th>
+            <th>Действие</th>
+            <th>Таблица</th>
+            <th>Запис #</th>
+            <th>Преди</th>
+            <th>След</th>
+            <th>Дата</th>
+          </tr>
+        </thead>
+        <tbody id="auditTable"></tbody>
+      </table>
+    </div>
+  `;
+  container.appendChild(div);
+})();
+
+async function loadAuditLog() {
+  const tbody = document.getElementById('auditTable');
+  const table = document.getElementById('auditTableFilter')?.value || '';
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="8" class="loading">Зареждане...</td></tr>';
+
+  try {
+    const url = '/admin/audit-log' + (table ? `?table=${encodeURIComponent(table)}` : '');
+    const logs = await LuxeAuto.api.get(url);
+
+    if (!logs || logs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8">Няма записи в одит лога</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = logs.map(l => `
+      <tr>
+        <td>${l.id}</td>
+        <td>${l.admin_name || l.admin_id}</td>
+        <td><code>${l.action}</code></td>
+        <td>${l.table_name}</td>
+        <td>${l.record_id}</td>
+        <td><pre style="font-size:0.75rem; white-space:pre-wrap; margin:0;">${
+          l.previous_values ? JSON.stringify(JSON.parse(l.previous_values), null, 2) : '—'
+        }</pre></td>
+        <td><pre style="font-size:0.75rem; white-space:pre-wrap; margin:0;">${
+          l.new_values ? JSON.stringify(JSON.parse(l.new_values), null, 2) : '—'
+        }</pre></td>
+        <td>${formatDateShort(l.created_at)}</td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" class="alert alert-error">${err.message}</td></tr>`;
+  }
+}
+
+// Extend showAdminSection to handle the new 'audit' section
+const _originalShowAdminSection = window.showAdminSection;
+window.showAdminSection = function(id) {
+  _originalShowAdminSection(id);
+  if (id === 'audit') loadAuditLog();
+};
+
+// ── 3. Loading guards for status change buttons (Task 3) ───────────────────
+
+const _originalUpdateRequestStatus = window.updateRequestStatus;
+window.updateRequestStatus = async function(id, status) {
+  const btn = event?.target;
+  if (btn) {
+    btn.disabled    = true;
+    btn.textContent = '...';
+  }
+  try {
+    await _originalUpdateRequestStatus(id, status);
+  } finally {
+    if (btn) {
+      btn.disabled    = false;
+      btn.textContent = status === 'approved' ? 'Одобри'
+                      : status === 'rejected' ? 'Откажи'
+                      : 'Приключи';
+    }
+  }
+};
+
+// ── Utility helpers ─────────────────────────────────────────────────────────
+
+function formatDateShort(dateStr) {
+  if (!dateStr) return '—';
+  return new Date(dateStr).toLocaleDateString('bg-BG', {
+    day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+}
+
+function showToast(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    padding: 14px 22px; border-radius: 8px; font-size: 0.95rem;
+    background: ${type === 'warning' ? 'rgba(255,193,7,0.95)' : 'rgba(75,136,162,0.95)'};
+    color: #171614; max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 6000);
+}
+
   </script>
 </body>
 </html>

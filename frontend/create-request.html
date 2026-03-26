@@ -5,6 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Създай заявка - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── Date picker restrictions (Task 1 frontend) ── */
+    input[type="date"].date-restricted {
+      border-color: var(--cta);
+    }
+    .date-hint {
+      font-size: 0.82rem;
+      color: var(--cta);
+      margin-top: 5px;
+      min-height: 18px;
+      transition: opacity 0.2s;
+    }
+    .date-hint.hidden { opacity: 0; }
+
+    /* ── Loading / double-submit guard (Task 3) ── */
+    .btn-loading {
+      position: relative;
+      pointer-events: none;
+      opacity: 0.75;
+    }
+    .btn-loading::after {
+      content: '';
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.6);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Field-level error messages (Task 3) ── */
+    .field-error {
+      color: var(--danger);
+      font-size: 0.82rem;
+      margin-top: 4px;
+    }
+    .form-group input.is-invalid,
+    .form-group select.is-invalid {
+      border-color: var(--danger);
+    }
+
+    /* ── Car cards ── */
+    .car-selection-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .car-checkbox {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background-color: var(--card);
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: var(--transition);
+    }
+    .car-checkbox:hover { background-color: rgba(75,136,162,0.15); }
+    .car-checkbox.selected { border-color: var(--accent); background-color: rgba(75,136,162,0.2); }
+    .car-checkbox input { width: 20px; height: 20px; accent-color: var(--accent); }
+  </style>
 </head>
 <body>
   <header>
@@ -48,39 +115,176 @@
 
   <script src="js/main.js"></script>
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    const preselectedTemplate = urlParams.get('template');
-    const preselectedCar = urlParams.get('car');
+    // ── State ─────────────────────────────────────────────────────────────────
+    const urlParams         = new URLSearchParams(window.location.search);
+    const preselectedTmpl   = urlParams.get('template');
+    const preselectedCar    = urlParams.get('car');
 
-    // Check auth
     if (!LuxeAuto.auth.isLoggedIn()) {
       window.location.href = 'login.html?redirect=create-request.html';
     }
 
-    let selectedCars = [];
+    let selectedCars     = [];
     let selectedTemplate = null;
-    let allCars = [];
+    let allCars          = [];
+    let isSubmitting     = false;
+
+    // ── Template pack detection ───────────────────────────────────────────────
+    function packType(templateName) {
+      if (!templateName) return 'standard';
+      const n = templateName.toLowerCase();
+      if (n.includes('уикенд') || n.includes('weekend')) return 'weekend';
+      if (n.includes('бизнес') || n.includes('business')) return 'business';
+      return 'standard';
+    }
+
+    // ── Date restriction helpers (Task 1 frontend) ────────────────────────────
+
+    /**
+     * Returns a hint string describing the date rule for the current pack.
+     */
+    function dateHintText(pack) {
+      if (pack === 'weekend')  return 'Уикенд пакет: Начало в петък, край в неделя (мин. 2 нощувки)';
+      if (pack === 'business') return 'Бизнес пакет: Само работни дни (пон–пет), без уикенди';
+      return '';
+    }
+
+    /**
+     * Applies min/step attributes and the hint label; grays out invalid
+     * date inputs based on the selected pack.
+     *
+     * Note: <input type="date"> does not natively support disabling individual
+     * days of the week, so we use `step` + visual hint + server-side enforcement.
+     * A full calendar picker would require a JS library; this approach keeps
+     * zero extra dependencies while still guiding the user clearly.
+     */
+    function applyDateRestrictions() {
+      const startEl = document.getElementById('start_date');
+      const endEl   = document.getElementById('end_date');
+      const hint    = document.getElementById('date-hint');
+      if (!startEl || !endEl) return;
+
+      const pack = packType(selectedTemplate?.name);
+
+      // Reset
+      startEl.classList.remove('date-restricted', 'is-invalid');
+      endEl.classList.remove('date-restricted', 'is-invalid');
+      clearFieldError('start_date');
+      clearFieldError('end_date');
+
+      if (pack === 'weekend') {
+        startEl.classList.add('date-restricted');
+        endEl.classList.add('date-restricted');
+        // Step 7 keeps the picker on the same weekday once a valid start is chosen
+        startEl.step = 7;
+        endEl.step   = 7;
+      } else if (pack === 'business') {
+        startEl.classList.add('date-restricted');
+        endEl.classList.add('date-restricted');
+        startEl.step = 1;
+        endEl.step   = 1;
+      } else {
+        startEl.step = 1;
+        endEl.step   = 1;
+      }
+
+      if (hint) {
+        hint.textContent = dateHintText(pack);
+        hint.classList.toggle('hidden', !hint.textContent);
+      }
+    }
+
+    /**
+     * Client-side date validation mirrors the backend rules.
+     * Returns an array of { field, message } errors.
+     */
+    function validateDatesClient(startStr, endStr) {
+      const errors = [];
+      if (!startStr) { errors.push({ field: 'start_date', message: 'Началната дата е задължителна' }); }
+      if (!endStr)   { errors.push({ field: 'end_date',   message: 'Крайната дата е задължителна' }); }
+      if (errors.length) return errors;
+
+      const start = new Date(startStr);
+      const end   = new Date(endStr);
+      const today = new Date(); today.setHours(0,0,0,0);
+
+      if (start < today)  errors.push({ field: 'start_date', message: 'Началната дата не може да бъде в миналото' });
+      if (end <= start)   errors.push({ field: 'end_date',   message: 'Крайната дата трябва да е след началната' });
+      if (errors.length) return errors;
+
+      const pack = packType(selectedTemplate?.name);
+
+      if (pack === 'weekend') {
+        if (start.getDay() !== 5) errors.push({ field: 'start_date', message: 'Уикенд пакетът трябва да започва в петък' });
+        if (end.getDay()   !== 0) errors.push({ field: 'end_date',   message: 'Уикенд пакетът трябва да завършва в неделя' });
+        const days = Math.round((end - start) / 86400000);
+        if (days < 2) errors.push({ field: 'end_date', message: 'Уикенд пакетът изисква минимум 2 нощувки (пет–нед)' });
+      }
+
+      if (pack === 'business') {
+        const startDay = start.getDay();
+        const endDay   = end.getDay();
+        if (startDay === 0 || startDay === 6)
+          errors.push({ field: 'start_date', message: 'Бизнес пакетът трябва да започва в работен ден (пон–пет)' });
+        if (endDay === 0 || endDay === 6)
+          errors.push({ field: 'end_date', message: 'Бизнес пакетът трябва да завършва в работен ден (пон–пет)' });
+
+        // Check entire range for weekend days
+        const cur = new Date(start);
+        let hasWeekend = false;
+        while (cur < end) {
+          if (cur.getDay() === 0 || cur.getDay() === 6) { hasWeekend = true; break; }
+          cur.setDate(cur.getDate() + 1);
+        }
+        if (hasWeekend)
+          errors.push({ field: 'end_date', message: 'Бизнес пакетът не може да включва събота или неделя' });
+      }
+
+      return errors;
+    }
+
+    // ── Field error UI helpers ────────────────────────────────────────────────
+
+    function showFieldError(fieldName, message) {
+      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
+      if (!el) return;
+      el.classList.add('is-invalid');
+      let errDiv = el.parentNode.querySelector('.field-error');
+      if (!errDiv) {
+        errDiv = document.createElement('div');
+        errDiv.className = 'field-error';
+        el.parentNode.appendChild(errDiv);
+      }
+      errDiv.textContent = message;
+    }
+
+    function clearFieldError(fieldName) {
+      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
+      if (!el) return;
+      el.classList.remove('is-invalid');
+      const errDiv = el.parentNode && el.parentNode.querySelector('.field-error');
+      if (errDiv) errDiv.textContent = '';
+    }
+
+    function clearAllFieldErrors() {
+      document.querySelectorAll('.field-error').forEach(e => e.textContent = '');
+      document.querySelectorAll('.is-invalid').forEach(e => e.classList.remove('is-invalid'));
+    }
+
+    // ── Form initialisation ───────────────────────────────────────────────────
 
     async function initForm() {
       const container = document.getElementById('requestFormContainer');
-      
-      // Load template if specified
-      if (preselectedTemplate) {
+
+      if (preselectedTmpl) {
         try {
-          selectedTemplate = await LuxeAuto.api.get(`/templates/${preselectedTemplate}`);
-        } catch (e) {
-          console.error('Template not found');
-        }
+          selectedTemplate = await LuxeAuto.api.get(`/templates/${preselectedTmpl}`);
+        } catch (e) { console.error('Template not found'); }
       }
 
-      // Load cars
-      try {
-        allCars = await LuxeAuto.api.get('/cars?available=true');
-      } catch (e) {
-        allCars = [];
-      }
+      try { allCars = await LuxeAuto.api.get('/cars?available=true'); }
+      catch (e) { allCars = []; }
 
-      // Add preselected car
       if (preselectedCar && !selectedCars.includes(preselectedCar)) {
         selectedCars.push(preselectedCar);
       }
@@ -90,9 +294,25 @@
 
     function renderForm(container) {
       const today = new Date().toISOString().split('T')[0];
-      
-      let html = `
-        <form id="requestForm">
+      const pack  = packType(selectedTemplate?.name);
+
+      container.innerHTML = `
+        <form id="requestForm" novalidate>
+
+          <!-- ── Template info ── -->
+          ${selectedTemplate ? `
+            <div class="card" style="margin-bottom:20px; border-color:var(--cta);">
+              <p style="color:var(--cta); font-weight:600; margin-bottom:6px;">
+                Избран пакет: ${selectedTemplate.name}
+                <span style="font-weight:400; color:rgba(236,229,240,0.7);">
+                  · ${selectedTemplate.duration_days} дни · ${selectedTemplate.discount_percent}% отстъпка
+                </span>
+              </p>
+              ${pack !== 'standard' ? `<p class="date-hint" id="date-hint">${dateHintText(pack)}</p>` : ''}
+            </div>
+          ` : '<p id="date-hint" class="date-hint hidden" style="margin-bottom:10px;"></p>'}
+
+          <!-- ── Dates ── -->
           <div class="card" style="margin-bottom:25px;">
             <h3 style="color:var(--cta); margin-bottom:20px;">📅 Период на наем</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
@@ -107,168 +327,207 @@
             </div>
           </div>
 
+          <!-- ── Car selection ── -->
           <div class="card" style="margin-bottom:25px;">
             <h3 style="color:var(--cta); margin-bottom:20px;">🚗 Изберете автомобили *</h3>
-            <p style="margin-bottom:15px; color:rgba(236,229,240,0.7);">Изберете поне един автомобил (можете да изберете повече):</p>
-            <div id="carSelection" class="car-selection-grid">
+            <p style="margin-bottom:15px; color:rgba(236,229,240,0.7);">
+              Изберете поне един автомобил (може повече):
+            </p>
+            <div id="car-selection" name="car_ids" class="car-selection-grid">
               ${renderCarSelection()}
             </div>
+            <div class="field-error" id="car-error"></div>
           </div>
 
+          <!-- ── Notes ── -->
           <div class="card" style="margin-bottom:25px;">
             <h3 style="color:var(--cta); margin-bottom:20px;">📝 Допълнителна информация</h3>
             <div class="form-group">
               <label for="notes">Бележки или специални искания</label>
-              <textarea id="notes" name="notes" placeholder="Ако имате специални изисквания, моля опишете ги тук..."></textarea>
+              <textarea id="notes" name="notes"
+                placeholder="Ако имате специални изисквания, моля опишете ги тук..."
+                maxlength="1000"></textarea>
+              <small id="notes-counter" style="color:rgba(236,229,240,0.5);">0 / 1000</small>
             </div>
           </div>
 
-          <div id="priceCalculation" style="display:none;">
-            <div class="total-price" id="totalPrice">Обща цена: 0.00 лв.</div>
+          <!-- ── Live price ── -->
+          <div id="price-calculation" style="display:none;">
+            <div class="total-price" id="total-price">Обща цена: €0.00</div>
           </div>
 
-          <div id="formMessage"></div>
+          <div id="form-message"></div>
 
-          <button type="submit" class="btn btn-primary btn-lg" style="width:100%; margin-top:20px;">
+          <button type="submit" id="submit-btn" class="btn btn-primary btn-lg"
+                  style="width:100%; margin-top:20px;">
             Изпрати заявка
           </button>
         </form>
       `;
-      
-      container.innerHTML = html;
-      
-      // Add event listeners
-      document.getElementById('start_date').addEventListener('change', updatePrice);
-      document.getElementById('end_date').addEventListener('change', updatePrice);
-      
+
+      // Attach listeners
+      document.getElementById('start_date').addEventListener('change', onDateChange);
+      document.getElementById('end_date').addEventListener('change', onDateChange);
+      document.getElementById('notes').addEventListener('input', onNotesInput);
       document.getElementById('requestForm').addEventListener('submit', submitRequest);
+
+      applyDateRestrictions();
     }
 
     function renderCarSelection() {
-      if (allCars.length === 0) {
-        return '<p>Няма налични автомобили</p>';
-      }
-      
+      if (allCars.length === 0) return '<p>Няма налични автомобили</p>';
       return allCars.map(car => `
-        <label class="car-checkbox ${selectedCars.includes(car.id.toString()) ? 'selected' : ''}">
-          <input type="checkbox" value="${car.id}" 
-            ${selectedCars.includes(car.id.toString()) ? 'checked' : ''}
+        <label class="car-checkbox ${selectedCars.includes(String(car.id)) ? 'selected' : ''}">
+          <input type="checkbox" value="${car.id}"
+            ${selectedCars.includes(String(car.id)) ? 'checked' : ''}
             onchange="toggleCar(this)">
           <div>
             <strong>${car.brand} ${car.model}</strong><br>
-            <small>${ui.formatPrice(car.price_per_day)}/ден</small>
+            <small>${LuxeAuto.ui.formatPrice(car.price_per_day)}/ден</small>
           </div>
         </label>
       `).join('');
     }
 
     function toggleCar(checkbox) {
-      const id = checkbox.value;
+      const id     = checkbox.value;
       const parent = checkbox.closest('.car-checkbox');
-      
       if (checkbox.checked) {
-        if (!selectedCars.includes(id)) {
-          selectedCars.push(id);
-        }
+        if (!selectedCars.includes(id)) selectedCars.push(id);
         parent.classList.add('selected');
       } else {
         selectedCars = selectedCars.filter(c => c !== id);
         parent.classList.remove('selected');
       }
-      
+      // Clear car error on interaction (Task 3 UX)
+      document.getElementById('car-error').textContent = '';
       updatePrice();
     }
 
+    // ── Date change handler (Task 1 + Task 3) ────────────────────────────────
+
+    function onDateChange() {
+      clearAllFieldErrors();
+      const startStr = document.getElementById('start_date').value;
+      const endStr   = document.getElementById('end_date').value;
+
+      // Show live validation only once both are filled
+      if (startStr && endStr) {
+        const errs = validateDatesClient(startStr, endStr);
+        errs.forEach(e => showFieldError(e.field, e.message));
+      }
+      updatePrice();
+    }
+
+    function onNotesInput(e) {
+      const counter = document.getElementById('notes-counter');
+      if (counter) counter.textContent = `${e.target.value.length} / 1000`;
+    }
+
+    // ── Live price preview ────────────────────────────────────────────────────
+
     function updatePrice() {
-      const priceDiv = document.getElementById('priceCalculation');
-      const startDate = document.getElementById('start_date').value;
-      const endDate = document.getElementById('end_date').value;
-      
-      if (!startDate || !endDate || selectedCars.length === 0) {
-        priceDiv.style.display = 'none';
-        return;
+      const priceDiv = document.getElementById('price-calculation');
+      const startStr = document.getElementById('start_date')?.value;
+      const endStr   = document.getElementById('end_date')?.value;
+      if (!startStr || !endStr || selectedCars.length === 0) {
+        priceDiv.style.display = 'none'; return;
       }
-      
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-      
-      if (days <= 0) {
-        priceDiv.style.display = 'none';
-        return;
-      }
-      
-      let basePrice = 0;
+      const start = new Date(startStr);
+      const end   = new Date(endStr);
+      const days  = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      if (days <= 0) { priceDiv.style.display = 'none'; return; }
+
+      let base = 0;
       selectedCars.forEach(id => {
-        const car = allCars.find(c => c.id.toString() === id);
-        if (car) {
-          basePrice += car.price_per_day;
-        }
+        const car = allCars.find(c => String(c.id) === id);
+        if (car) base += parseFloat(car.price_per_day);
       });
-      
-      // Apply template discount
-      let discount = 0;
-      if (selectedTemplate) {
-        discount = selectedTemplate.discount_percent || 0;
-      }
-      
-      const totalPrice = basePrice * days * (1 - discount / 100);
-      
-      document.getElementById('totalPrice').innerHTML = `
-        ${selectedTemplate ? `
-          <div style="text-align:right; font-size:0.9rem; margin-bottom:5px;">
-            ${selectedTemplate.name} - ${selectedTemplate.discount_percent}% отстъпка
-          </div>
-        ` : ''}
-        ${ui.formatPrice(totalPrice)} 
-        <span style="font-size:0.9rem; font-weight:normal;">
-          (${days} дни × ${selectedCars.length} автомобил/а)
+      const discount = selectedTemplate ? (parseFloat(selectedTemplate.discount_percent) || 0) : 0;
+      const total    = base * days * (1 - discount / 100);
+
+      document.getElementById('total-price').innerHTML = `
+        ${discount > 0 ? `
+          <div style="text-align:right;font-size:0.85rem;margin-bottom:4px;">
+            Пакет ${selectedTemplate.name} — ${discount}% отстъпка
+          </div>` : ''}
+        ${LuxeAuto.ui.formatPrice(total)}
+        <span style="font-size:0.9rem;font-weight:normal;">
+          (${days} дни × ${selectedCars.length} кола)
         </span>
       `;
-      
       priceDiv.style.display = 'block';
     }
 
+    // ── Form submit (Task 2 + Task 3) ─────────────────────────────────────────
+
     async function submitRequest(e) {
       e.preventDefault();
-      const messageDiv = document.getElementById('formMessage');
-      
-      const startDate = document.getElementById('start_date').value;
-      const endDate = document.getElementById('end_date').value;
-      
-      if (selectedCars.length === 0) {
-        messageDiv.innerHTML = '<div class="alert alert-error">Моля изберете поне един автомобил</div>';
+      if (isSubmitting) return; // prevent double-submit (Task 3)
+
+      clearAllFieldErrors();
+      const msgDiv    = document.getElementById('form-message');
+      const submitBtn = document.getElementById('submit-btn');
+      msgDiv.innerHTML = '';
+
+      const startStr = document.getElementById('start_date').value;
+      const endStr   = document.getElementById('end_date').value;
+
+      // Client-side date validation (Task 1 + Task 3)
+      const dateErrors = validateDatesClient(startStr, endStr);
+      if (dateErrors.length) {
+        dateErrors.forEach(err => showFieldError(err.field, err.message));
         return;
       }
-      
-      messageDiv.innerHTML = '<div class="loading">Изпращане на заявка...</div>';
-      
+
+      if (selectedCars.length === 0) {
+        document.getElementById('car-error').textContent = 'Моля изберете поне един автомобил';
+        return;
+      }
+
+      // Loading state — prevents click-spamming (Task 3)
+      isSubmitting = true;
+      submitBtn.classList.add('btn-loading');
+      submitBtn.textContent = 'Изпращане...';
+      msgDiv.innerHTML = '<div class="loading">Проверка на наличността и изчисляване на цена...</div>';
+
       try {
         const data = await LuxeAuto.api.post('/requests', {
           template_id: selectedTemplate?.id || null,
-          car_ids: selectedCars.map(id => parseInt(id)),
-          start_date: startDate,
-          end_date: endDate,
-          notes: document.getElementById('notes').value
+          car_ids:     selectedCars.map(Number),
+          start_date:  startStr,
+          end_date:    endStr,
+          notes:       document.getElementById('notes').value.trim()
         });
-        
-        messageDiv.innerHTML = `<div class="alert alert-success">
-          Заявката е изпратена успешно! 
-          <br>Обща цена: ${ui.formatPrice(data.total_price)}
-          <br><a href="my-requests.html">Вижте вашите заявки</a>
-        </div>`;
-        
-        // Clear form
+
+        msgDiv.innerHTML = `
+          <div class="alert alert-success">
+            Заявката е изпратена успешно!<br>
+            Обща цена: ${LuxeAuto.ui.formatPrice(data.total_price)}<br>
+            <a href="my-requests.html">Вижте вашите заявки →</a>
+          </div>`;
+
         document.getElementById('requestForm').reset();
         selectedCars = [];
-        document.getElementById('priceCalculation').style.display = 'none';
-        
-        // Refresh car selection
-        document.getElementById('carSelection').innerHTML = renderCarSelection();
+        document.getElementById('price-calculation').style.display = 'none';
+        document.getElementById('car-selection').innerHTML = renderCarSelection();
+
       } catch (error) {
-        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        // Map server-side error details back to fields (Task 3 — specific messages)
+        if (error.details && Array.isArray(error.details)) {
+          error.details.forEach(d => showFieldError(d.field, d.message));
+          msgDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        } else {
+          msgDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        }
+      } finally {
+        isSubmitting = false;
+        submitBtn.classList.remove('btn-loading');
+        submitBtn.textContent = 'Изпрати заявка';
       }
     }
+
+    // ── Init ──────────────────────────────────────────────────────────────────
 
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
@@ -277,4 +536,3 @@
   </script>
 </body>
 </html>
-

@@ -96,6 +96,38 @@ app.get('/api/admin/dashboard', require('./middleware/auth').requireAuth, requir
   }
 });
 
+app.get('/api/admin/audit-log',
+  require('./middleware/auth').requireAuth,
+  require('./middleware/auth').requireAdmin,
+  async (req, res) => {
+    try {
+      const { table } = req.query;
+      let query = `
+        SELECT al.*, u.first_name, u.last_name,
+               CONCAT(u.first_name, ' ', u.last_name) AS admin_name
+        FROM audit_log al
+        JOIN users u ON al.admin_id = u.id
+      `;
+      const params = [];
+      if (table) {
+        query += ' WHERE al.table_name = ?';
+        params.push(table);
+      }
+      query += ' ORDER BY al.created_at DESC LIMIT 200';
+
+      const [logs] = await pool.query(query, params);
+      res.json({ success: true, data: logs, count: logs.length });
+    } catch (error) {
+      console.error('Audit log fetch error:', error);
+      res.status(500).json({
+        success: false,
+        error: { message: 'Грешка при зареждане на одит лога', code: 'AUDIT_ERROR' }
+      });
+    }
+  }
+);
+
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ 

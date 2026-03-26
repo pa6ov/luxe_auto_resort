@@ -5,61 +5,64 @@ const { asyncHandler, ErrorCodes } = require('../utils/errors');
 
 const router = express.Router();
 
-// Helper to validate car input
+// ── Validation ─────────────────────────────────────────────────────────────
+
 const validateCarInput = (data, isUpdate = false) => {
   const errors = [];
-  
-  // Required fields validation
+
   if (!isUpdate) {
-    if (!data.brand) {
-      errors.push({ field: 'brand', message: 'Марката е задължителна' });
-    }
-    if (!data.model) {
-      errors.push({ field: 'model', message: 'Моделът е задължителен' });
-    }
-    if (!data.year) {
-      errors.push({ field: 'year', message: 'Годината е задължителна' });
-    }
-    if (!data.price_per_day) {
-      errors.push({ field: 'price_per_day', message: 'Цената на ден е задължителна' });
-    }
+    if (!data.brand)         errors.push({ field: 'brand',         message: 'Марката е задължителна' });
+    if (!data.model)         errors.push({ field: 'model',         message: 'Моделът е задължителен' });
+    if (!data.year)          errors.push({ field: 'year',          message: 'Годината е задължителна' });
+    if (!data.price_per_day) errors.push({ field: 'price_per_day', message: 'Цената на ден е задължителна' });
   }
-  
-  // Year validation
+
   if (data.year) {
     const year = parseInt(data.year);
-    if (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 1) {
+    if (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 2) {
       errors.push({ field: 'year', message: 'Невалидна година' });
     }
   }
-  
-  // Price validation
   if (data.price_per_day) {
     const price = parseFloat(data.price_per_day);
     if (isNaN(price) || price <= 0) {
       errors.push({ field: 'price_per_day', message: 'Цената трябва да е положително число' });
     }
   }
-  
-  // Seats validation
   if (data.seats) {
     const seats = parseInt(data.seats);
     if (isNaN(seats) || seats < 1 || seats > 50) {
       errors.push({ field: 'seats', message: 'Броят на местата трябва да е между 1 и 50' });
     }
   }
-  
-  // License plate format validation (optional field)
   if (data.license_plate && !/^[А-ЯA-Z0-9\s\-]{4,15}$/i.test(data.license_plate)) {
     errors.push({ field: 'license_plate', message: 'Невалиден формат на регистрационен номер' });
   }
-  
+
   return errors;
 };
 
-// Всички автомобили (публичен)
+// ── Audit log helper (same signature as in requests.js) ─────────────────────
+
+async function writeAuditLog(adminId, action, tableName, recordId, previousValues, newValues) {
+  try {
+    await pool.query(
+      `INSERT INTO audit_log
+         (admin_id, action, table_name, record_id, previous_values, new_values)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [adminId, action, tableName, recordId,
+       JSON.stringify(previousValues), JSON.stringify(newValues)]
+    );
+  } catch (err) {
+    console.error('Audit log write failed:', err.message);
+  }
+}
+
+// ── Routes ─────────────────────────────────────────────────────────────────
+
+// GET /api/cars — public, with filters & sort
 router.get('/', asyncHandler(async (req, res) => {
-  const { brand, type, min_price, max_price, available, sort, location, min_seats, max_seats, start_date, end_date } = req.query;
+  const { brand, type, min_price, max_price, available, sort } = req.query;
 
   let query = 'SELECT * FROM cars WHERE 1=1';
   const params = [];
@@ -73,154 +76,70 @@ router.get('/', asyncHandler(async (req, res) => {
     if (!validTypes.includes(type)) {
       return res.status(400).json({
         success: false,
-        error: {
-          message: 'Невалиден тип автомобил',
-          code: ErrorCodes.INVALID_VALUE,
-          details: [{ field: 'type', message: 'Невалиден тип автомобил' }]
-        }
+        error: { message: 'Невалиден тип автомобил', code: ErrorCodes.INVALID_VALUE }
       });
     }
     query += ' AND type = ?';
     params.push(type);
   }
-  if (location) {
-    query += ' AND location LIKE ?';
-    params.push(`%${location}%`);
-  }
-  if (min_seats) {
-    const minSeats = parseInt(min_seats);
-    if (!isNaN(minSeats) && minSeats > 0) {
-      query += ' AND seats >= ?';
-      params.push(minSeats);
-    }
-  }
-  if (max_seats) {
-    const maxSeats = parseInt(max_seats);
-    if (!isNaN(maxSeats) && maxSeats > 0) {
-      query += ' AND seats <= ?';
-      params.push(maxSeats);
-    }
-  }
   if (min_price) {
-    const minPrice = parseFloat(min_price);
-    if (isNaN(minPrice) || minPrice < 0) {
+    const v = parseFloat(min_price);
+    if (isNaN(v) || v < 0) {
       return res.status(400).json({
         success: false,
-        error: {
-          message: 'Невалидна минимална цена',
-          code: ErrorCodes.INVALID_VALUE
-        }
+        error: { message: 'Невалидна минимална цена', code: ErrorCodes.INVALID_VALUE }
       });
     }
     query += ' AND price_per_day >= ?';
-    params.push(min_price);
+    params.push(v);
   }
   if (max_price) {
-    const maxPrice = parseFloat(max_price);
-    if (isNaN(maxPrice) || maxPrice < 0) {
+    const v = parseFloat(max_price);
+    if (isNaN(v) || v < 0) {
       return res.status(400).json({
         success: false,
-        error: {
-          message: 'Невалидна максимална цена',
-          code: ErrorCodes.INVALID_VALUE
-        }
+        error: { message: 'Невалидна максимална цена', code: ErrorCodes.INVALID_VALUE }
       });
     }
     query += ' AND price_per_day <= ?';
-    params.push(max_price);
+    params.push(v);
   }
-  if (available === 'true') {
-    query += ' AND available = TRUE';
-  }
+  if (available === 'true') query += ' AND available = TRUE';
 
-  // Filter by date availability - exclude cars with overlapping approved requests
-  if (start_date && end_date) {
-    const start = new Date(start_date);
-    const end = new Date(end_date);
-
-    if (!isNaN(start.getTime()) && !isNaN(end.getTime()) && start <= end) {
-      query += ` AND id NOT IN (
-        SELECT DISTINCT rc.car_id
-        FROM request_cars rc
-        JOIN rental_requests rr ON rc.request_id = rr.id
-        WHERE rr.status IN ('approved', 'pending')
-        AND rr.start_date <= ?
-        AND rr.end_date >= ?
-      )`;
-      params.push(end_date, start_date);
-    }
-  }
-
-  // Сортиране
   switch (sort) {
-    case 'price_asc':
-      query += ' ORDER BY price_per_day ASC';
-      break;
-    case 'price_desc':
-      query += ' ORDER BY price_per_day DESC';
-      break;
-    case 'year_desc':
-      query += ' ORDER BY year DESC';
-      break;
-    case 'brand':
-      query += ' ORDER BY brand, model';
-      break;
-    case 'seats_asc':
-      query += ' ORDER BY seats ASC';
-      break;
-    case 'seats_desc':
-      query += ' ORDER BY seats DESC';
-      break;
-    default:
-      query += ' ORDER BY id';
+    case 'price_asc':  query += ' ORDER BY price_per_day ASC';  break;
+    case 'price_desc': query += ' ORDER BY price_per_day DESC'; break;
+    case 'year_desc':  query += ' ORDER BY year DESC';          break;
+    case 'brand':      query += ' ORDER BY brand, model';       break;
+    default:           query += ' ORDER BY id';
   }
 
   const [cars] = await pool.query(query, params);
-  res.json({
-    success: true,
-    data: cars,
-    count: cars.length
-  });
+  res.json({ success: true, data: cars, count: cars.length });
 }));
 
-// Един автомобил (публичен)
+// GET /api/cars/:id — public
 router.get('/:id', asyncHandler(async (req, res) => {
   const carId = parseInt(req.params.id);
-  
   if (isNaN(carId)) {
     return res.status(400).json({
       success: false,
-      error: {
-        message: 'Невалидно ID на автомобил',
-        code: ErrorCodes.INVALID_VALUE
-      }
+      error: { message: 'Невалидно ID на автомобил', code: ErrorCodes.INVALID_VALUE }
     });
   }
-  
+
   const [cars] = await pool.query('SELECT * FROM cars WHERE id = ?', [carId]);
-  
   if (cars.length === 0) {
     return res.status(404).json({
       success: false,
-      error: {
-        message: 'Автомобилът не е намерен',
-        code: ErrorCodes.NOT_FOUND
-      }
+      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
     });
   }
-
-  res.json({
-    success: true,
-    data: cars[0]
-  });
+  res.json({ success: true, data: cars[0] });
 }));
 
-// Създаване на автомобил (админ)
+// POST /api/cars — admin creates car
 router.post('/', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  const { brand, model, year, license_plate, price_per_day, type, seats, 
-          transmission, fuel_type, mileage, image_url, description, available } = req.body;
-
-  // Validate input
   const validationErrors = validateCarInput(req.body, false);
   if (validationErrors.length > 0) {
     return res.status(400).json({
@@ -233,40 +152,42 @@ router.post('/', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
     });
   }
 
+  const {
+    brand, model, year, license_plate, price_per_day, type, seats,
+    transmission, fuel_type, mileage, image_url, description, available
+  } = req.body;
+
   const [result] = await pool.query(
-    `INSERT INTO cars (brand, model, year, license_plate, price_per_day, type, seats, 
-                       transmission, fuel_type, mileage, image_url, description, available) 
+    `INSERT INTO cars
+       (brand, model, year, license_plate, price_per_day, type, seats,
+        transmission, fuel_type, mileage, image_url, description, available)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [brand, model, year, license_plate || null, price_per_day, 
+    [brand, model, year, license_plate || null, price_per_day,
      type || 'sedan', seats || 5, transmission || 'automatic', fuel_type || 'petrol',
      mileage || 0, image_url || null, description || null, available !== false]
   );
 
-  res.status(201).json({ 
+  await writeAuditLog(req.user.id, 'CREATE_CAR', 'cars', result.insertId, null, req.body);
+
+  res.status(201).json({
     success: true,
     message: 'Автомобилът е създаден успешно',
-    id: result.insertId 
+    id: result.insertId
   });
 }));
 
-// Редактиране на автомобил (админ)
+// PUT /api/cars/:id — admin updates car
+// If `available` changes to FALSE, returns a `conflicts` warning when
+// active bookings exist for this car (Task 2 — conflict resolution).
 router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const carId = parseInt(req.params.id);
-  
   if (isNaN(carId)) {
     return res.status(400).json({
       success: false,
-      error: {
-        message: 'Невалидно ID на автомобил',
-        code: ErrorCodes.INVALID_VALUE
-      }
+      error: { message: 'Невалидно ID на автомобил', code: ErrorCodes.INVALID_VALUE }
     });
   }
-  
-  const { brand, model, year, license_plate, price_per_day, type, seats, 
-          transmission, fuel_type, mileage, image_url, description, available } = req.body;
 
-  // Validate input
   const validationErrors = validateCarInput(req.body, true);
   if (validationErrors.length > 0) {
     return res.status(400).json({
@@ -279,10 +200,42 @@ router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
     });
   }
 
+  // Fetch current state for audit log and conflict detection
+  const [prev] = await pool.query('SELECT * FROM cars WHERE id = ?', [carId]);
+  if (prev.length === 0) {
+    return res.status(404).json({
+      success: false,
+      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
+    });
+  }
+
+  const {
+    brand, model, year, license_plate, price_per_day, type, seats,
+    transmission, fuel_type, mileage, image_url, description, available
+  } = req.body;
+
+  // Detect maintenance conflict: car was available, now being set to unavailable
+  let conflictingBookings = [];
+  const goingUnavailable = prev[0].available && available === false;
+  if (goingUnavailable) {
+    const [conflicts] = await pool.query(
+      `SELECT rr.id AS request_id, rr.start_date, rr.end_date,
+              rr.status, u.first_name, u.last_name, u.email
+       FROM request_cars rc
+       JOIN rental_requests rr ON rc.request_id = rr.id
+       JOIN users u ON rr.user_id = u.id
+       WHERE rc.car_id = ? AND rr.status IN ('pending', 'approved')`,
+      [carId]
+    );
+    conflictingBookings = conflicts;
+  }
+
   const [result] = await pool.query(
-    `UPDATE cars SET brand=?, model=?, year=?, license_plate=?, price_per_day=?, 
-                       type=?, seats=?, transmission=?, fuel_type=?, mileage=?, image_url=?, 
-                       description=?, available=? WHERE id=?`,
+    `UPDATE cars
+     SET brand=?, model=?, year=?, license_plate=?, price_per_day=?,
+         type=?, seats=?, transmission=?, fuel_type=?, mileage=?,
+         image_url=?, description=?, available=?
+     WHERE id=?`,
     [brand, model, year, license_plate, price_per_day, type, seats,
      transmission, fuel_type, mileage, image_url, description, available, carId]
   );
@@ -290,50 +243,66 @@ router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   if (result.affectedRows === 0) {
     return res.status(404).json({
       success: false,
-      error: {
-        message: 'Автомобилът не е намерен',
-        code: ErrorCodes.NOT_FOUND
-      }
+      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
     });
   }
 
-  res.json({ 
+  // Audit log
+  const changedFields = {};
+  const prevFields = {};
+  const trackFields = ['brand','model','year','price_per_day','type','available'];
+  for (const f of trackFields) {
+    if (String(req.body[f]) !== String(prev[0][f])) {
+      prevFields[f]    = prev[0][f];
+      changedFields[f] = req.body[f];
+    }
+  }
+  if (Object.keys(changedFields).length > 0) {
+    await writeAuditLog(req.user.id, 'UPDATE_CAR', 'cars', carId, prevFields, changedFields);
+  }
+
+  const response = {
     success: true,
-    message: 'Автомобилът е обновен успешно' 
-  });
+    message: 'Автомобилът е обновен успешно'
+  };
+
+  // Warn admin about conflicting bookings (Task 2 — conflict resolution)
+  if (conflictingBookings.length > 0) {
+    response.warning =
+      `Автомобилът е маркиран като неналичен, но има ${conflictingBookings.length} активна/и резервация/и за него.`;
+    response.conflicting_bookings = conflictingBookings;
+  }
+
+  res.json(response);
 }));
 
-// Изтриване на автомобил (админ)
+// DELETE /api/cars/:id — admin deletes car (with audit log)
 router.delete('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const carId = parseInt(req.params.id);
-  
   if (isNaN(carId)) {
     return res.status(400).json({
       success: false,
-      error: {
-        message: 'Невалидно ID на автомобил',
-        code: ErrorCodes.INVALID_VALUE
-      }
+      error: { message: 'Невалидно ID на автомобил', code: ErrorCodes.INVALID_VALUE }
     });
   }
-  
-  const [result] = await pool.query('DELETE FROM cars WHERE id = ?', [carId]);
 
+  const [prev] = await pool.query(
+    'SELECT brand, model, year FROM cars WHERE id = ?', [carId]
+  );
+
+  const [result] = await pool.query('DELETE FROM cars WHERE id = ?', [carId]);
   if (result.affectedRows === 0) {
     return res.status(404).json({
       success: false,
-      error: {
-        message: 'Автомобилът не е намерен',
-        code: ErrorCodes.NOT_FOUND
-      }
+      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
     });
   }
 
-  res.json({ 
-    success: true,
-    message: 'Автомобилът е изтрит успешно' 
-  });
+  if (prev.length > 0) {
+    await writeAuditLog(req.user.id, 'DELETE_CAR', 'cars', carId, prev[0], null);
+  }
+
+  res.json({ success: true, message: 'Автомобилът е изтрит успешно' });
 }));
 
 module.exports = router;
-
