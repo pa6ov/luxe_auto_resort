@@ -6,30 +6,91 @@
   <title>Създай заявка - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    /* ── Date picker restrictions (Task 1 frontend) ── */
-    input[type="date"].date-restricted {
+    /* ── Date slot grid ── */
+    .date-slots {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .date-slot {
+      background: var(--card);
+      border: 2px solid rgba(75,136,162,0.25);
+      border-radius: var(--border-radius);
+      padding: 12px 10px;
+      cursor: pointer;
+      text-align: center;
+      transition: var(--transition);
+      user-select: none;
+    }
+    .date-slot:hover {
+      border-color: var(--accent);
+      background: rgba(75,136,162,0.15);
+    }
+    .date-slot.selected {
       border-color: var(--cta);
+      background: rgba(233,138,21,0.15);
     }
-    .date-hint {
-      font-size: 0.82rem;
-      color: var(--cta);
-      margin-top: 5px;
-      min-height: 18px;
-      transition: opacity 0.2s;
+    .date-slot .slot-start {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-light);
     }
-    .date-hint.hidden { opacity: 0; }
+    .date-slot .slot-arrow {
+      font-size: 0.75rem;
+      color: rgba(236,229,240,0.5);
+      margin: 3px 0;
+    }
+    .date-slot .slot-end {
+      font-size: 0.9rem;
+      color: var(--accent);
+    }
+    .date-slot .slot-nights {
+      font-size: 0.75rem;
+      color: rgba(236,229,240,0.5);
+      margin-top: 3px;
+    }
+    .date-slot.selected .slot-start,
+    .date-slot.selected .slot-end { color: var(--cta); }
 
-    /* ── Loading / double-submit guard (Task 3) ── */
-    .btn-loading {
-      position: relative;
-      pointer-events: none;
-      opacity: 0.75;
+    /* Free date pickers (no template) */
+    .free-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 560px) { .free-dates { grid-template-columns: 1fr; } }
+
+    /* Template badge */
+    .template-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(233,138,21,0.12);
+      border: 1px solid rgba(233,138,21,0.4);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 0.9rem;
+      color: var(--cta);
+      margin-bottom: 16px;
     }
+
+    /* Confirmed date display */
+    .date-confirmed {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 18px;
+      background: rgba(75,136,162,0.1);
+      border: 1px solid rgba(75,136,162,0.3);
+      border-radius: var(--border-radius);
+      margin-top: 14px;
+    }
+    .date-confirmed .dc-label { font-size: 0.8rem; color: rgba(236,229,240,0.55); }
+    .date-confirmed .dc-value { font-size: 1.05rem; font-weight: 600; }
+
+    /* Loading / submit guard */
+    .btn-loading { pointer-events: none; opacity: 0.75; }
     .btn-loading::after {
       content: '';
       display: inline-block;
-      width: 14px;
-      height: 14px;
+      width: 14px; height: 14px;
       border: 2px solid rgba(255,255,255,0.6);
       border-top-color: #fff;
       border-radius: 50%;
@@ -39,38 +100,33 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Field-level error messages (Task 3) ── */
-    .field-error {
-      color: var(--danger);
-      font-size: 0.82rem;
-      margin-top: 4px;
-    }
-    .form-group input.is-invalid,
-    .form-group select.is-invalid {
-      border-color: var(--danger);
-    }
+    /* Field errors */
+    .field-error { color: var(--danger); font-size: 0.82rem; margin-top: 4px; }
+    .form-group input.is-invalid { border-color: var(--danger); }
 
-    /* ── Car cards ── */
+    /* Car grid */
     .car-selection-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
       gap: 15px;
-      margin-bottom: 20px;
     }
     .car-checkbox {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px;
-      background-color: var(--card);
+      display: flex; align-items: center; gap: 10px;
+      padding: 12px; background: var(--card);
       border-radius: var(--border-radius);
-      cursor: pointer;
-      border: 2px solid transparent;
+      cursor: pointer; border: 2px solid transparent;
       transition: var(--transition);
     }
-    .car-checkbox:hover { background-color: rgba(75,136,162,0.15); }
-    .car-checkbox.selected { border-color: var(--accent); background-color: rgba(75,136,162,0.2); }
-    .car-checkbox input { width: 20px; height: 20px; accent-color: var(--accent); }
+    .car-checkbox:hover  { background: rgba(75,136,162,0.15); }
+    .car-checkbox.selected { border-color: var(--accent); background: rgba(75,136,162,0.2); }
+    .car-checkbox input  { width: 20px; height: 20px; accent-color: var(--accent); }
+
+    .no-slots {
+      padding: 20px;
+      color: rgba(236,229,240,0.55);
+      font-size: 0.95rem;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -115,163 +171,98 @@
 
   <script src="js/main.js"></script>
   <script>
-    // ── State ─────────────────────────────────────────────────────────────────
-    const urlParams         = new URLSearchParams(window.location.search);
-    const preselectedTmpl   = urlParams.get('template');
-    const preselectedCar    = urlParams.get('car');
+    // ─── globals ──────────────────────────────────────────────────────────────
+    const urlParams       = new URLSearchParams(window.location.search);
+    const preselectedTmpl = urlParams.get('template');
+    const preselectedCar  = urlParams.get('car');
 
     if (!LuxeAuto.auth.isLoggedIn()) {
       window.location.href = 'login.html?redirect=create-request.html';
     }
 
     let selectedCars     = [];
-    let selectedTemplate = null;
+    let selectedTemplate = null;   // full template object from API
     let allCars          = [];
     let isSubmitting     = false;
 
-    // ── Template pack detection ───────────────────────────────────────────────
-    function packType(templateName) {
-      if (!templateName) return 'standard';
-      const n = templateName.toLowerCase();
-      if (n.includes('уикенд') || n.includes('weekend')) return 'weekend';
-      if (n.includes('бизнес') || n.includes('business')) return 'business';
+    // Selected slot when a template is active: { start, end } YYYY-MM-DD strings
+    let selectedSlot     = null;
+
+    // ─── pack helpers ─────────────────────────────────────────────────────────
+
+    function packType(name) {
+      if (!name) return 'standard';
+      const n = name.toLowerCase();
+      if (n.includes('уикенд') || n.includes('weekend'))   return 'weekend';
+      if (n.includes('бизнес') || n.includes('business'))  return 'business';
       return 'standard';
     }
 
-    // ── Date restriction helpers (Task 1 frontend) ────────────────────────────
+    // ─── date utilities (timezone-safe) ──────────────────────────────────────
 
-    /**
-     * Returns a hint string describing the date rule for the current pack.
-     */
-    function dateHintText(pack) {
-      if (pack === 'weekend')  return 'Уикенд пакет: Начало в петък, край в неделя (мин. 2 нощувки)';
-      if (pack === 'business') return 'Бизнес пакет: Само работни дни (пон–пет), без уикенди';
-      return '';
+    /** Parse YYYY-MM-DD as local noon so .getDay() never shifts */
+    function parseLocal(str) {
+      const [y, m, d] = str.split('-').map(Number);
+      return new Date(y, m - 1, d, 12, 0, 0);
     }
 
-    /**
-     * Applies min/step attributes and the hint label; grays out invalid
-     * date inputs based on the selected pack.
-     *
-     * Note: <input type="date"> does not natively support disabling individual
-     * days of the week, so we use `step` + visual hint + server-side enforcement.
-     * A full calendar picker would require a JS library; this approach keeps
-     * zero extra dependencies while still guiding the user clearly.
-     */
-    function applyDateRestrictions() {
-      const startEl = document.getElementById('start_date');
-      const endEl   = document.getElementById('end_date');
-      const hint    = document.getElementById('date-hint');
-      if (!startEl || !endEl) return;
+    /** Format a Date to YYYY-MM-DD using local calendar */
+    function toYMD(date) {
+      const y  = date.getFullYear();
+      const m  = String(date.getMonth() + 1).padStart(2, '0');
+      const d  = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
 
-      const pack = packType(selectedTemplate?.name);
+    /** Human-readable Bulgarian date: "27 мар 2026 (пет)" */
+    const BG_MONTHS = ['яну','фев','мар','апр','май','юни',
+                       'юли','авг','сеп','окт','ное','дек'];
+    const BG_DAYS   = ['нед','пон','вт','ср','чет','пет','съб'];
 
-      // Reset
-      startEl.classList.remove('date-restricted', 'is-invalid');
-      endEl.classList.remove('date-restricted', 'is-invalid');
-      clearFieldError('start_date');
-      clearFieldError('end_date');
+    function formatBG(dateStr) {
+      const d = parseLocal(dateStr);
+      return `${d.getDate()} ${BG_MONTHS[d.getMonth()]} ${d.getFullYear()} (${BG_DAYS[d.getDay()]})`;
+    }
 
-      if (pack === 'weekend') {
-        startEl.classList.add('date-restricted');
-        endEl.classList.add('date-restricted');
-        // Step 7 keeps the picker on the same weekday once a valid start is chosen
-        startEl.step = 7;
-        endEl.step   = 7;
-      } else if (pack === 'business') {
-        startEl.classList.add('date-restricted');
-        endEl.classList.add('date-restricted');
-        startEl.step = 1;
-        endEl.step   = 1;
-      } else {
-        startEl.step = 1;
-        endEl.step   = 1;
+    function nightsLabel(n) {
+      if (n === 1) return '1 нощувка';
+      if (n < 5)   return `${n} нощувки`;
+      return `${n} нощувки`;
+    }
+
+    // ─── generate valid start slots for a template ────────────────────────────
+    //
+    //  Weekend  (Уикенд)  → starts must be FRIDAY
+    //  Business (Бизнес)  → starts must be MONDAY
+    //  Standard (Седмичен)→ any day is fine
+    //
+    //  End date = start + duration_days - 1  (fixed, no user choice)
+
+    function generateSlots(template, daysAhead = 90) {
+      const pack     = packType(template.name);
+      const duration = template.duration_days;   // from DB
+      const slots    = [];
+      const base     = new Date();
+      base.setHours(12, 0, 0, 0);
+
+      for (let i = 1; i <= daysAhead; i++) {
+        const d = new Date(base);
+        d.setDate(base.getDate() + i);
+        const dow = d.getDay();            // 0=Sun 1=Mon … 5=Fri 6=Sat
+
+        if (pack === 'weekend'  && dow !== 5) continue;   // Friday only
+        if (pack === 'business' && dow !== 1) continue;   // Monday only
+
+        const endD = new Date(d);
+        endD.setDate(d.getDate() + duration - 1);
+
+        slots.push({ start: toYMD(d), end: toYMD(endD) });
+        if (slots.length >= 12) break;    // show max 12 options
       }
-
-      if (hint) {
-        hint.textContent = dateHintText(pack);
-        hint.classList.toggle('hidden', !hint.textContent);
-      }
+      return slots;
     }
 
-    /**
-     * Client-side date validation mirrors the backend rules.
-     * Returns an array of { field, message } errors.
-     */
-    function validateDatesClient(startStr, endStr) {
-      const errors = [];
-      if (!startStr) { errors.push({ field: 'start_date', message: 'Началната дата е задължителна' }); }
-      if (!endStr)   { errors.push({ field: 'end_date',   message: 'Крайната дата е задължителна' }); }
-      if (errors.length) return errors;
-
-      const start = new Date(startStr);
-      const end   = new Date(endStr);
-      const today = new Date(); today.setHours(0,0,0,0);
-
-      if (start < today)  errors.push({ field: 'start_date', message: 'Началната дата не може да бъде в миналото' });
-      if (end <= start)   errors.push({ field: 'end_date',   message: 'Крайната дата трябва да е след началната' });
-      if (errors.length) return errors;
-
-      const pack = packType(selectedTemplate?.name);
-
-      if (pack === 'weekend') {
-        if (start.getDay() !== 5) errors.push({ field: 'start_date', message: 'Уикенд пакетът трябва да започва в петък' });
-        if (end.getDay()   !== 0) errors.push({ field: 'end_date',   message: 'Уикенд пакетът трябва да завършва в неделя' });
-        const days = Math.round((end - start) / 86400000);
-        if (days < 2) errors.push({ field: 'end_date', message: 'Уикенд пакетът изисква минимум 2 нощувки (пет–нед)' });
-      }
-
-      if (pack === 'business') {
-        const startDay = start.getDay();
-        const endDay   = end.getDay();
-        if (startDay === 0 || startDay === 6)
-          errors.push({ field: 'start_date', message: 'Бизнес пакетът трябва да започва в работен ден (пон–пет)' });
-        if (endDay === 0 || endDay === 6)
-          errors.push({ field: 'end_date', message: 'Бизнес пакетът трябва да завършва в работен ден (пон–пет)' });
-
-        // Check entire range for weekend days
-        const cur = new Date(start);
-        let hasWeekend = false;
-        while (cur < end) {
-          if (cur.getDay() === 0 || cur.getDay() === 6) { hasWeekend = true; break; }
-          cur.setDate(cur.getDate() + 1);
-        }
-        if (hasWeekend)
-          errors.push({ field: 'end_date', message: 'Бизнес пакетът не може да включва събота или неделя' });
-      }
-
-      return errors;
-    }
-
-    // ── Field error UI helpers ────────────────────────────────────────────────
-
-    function showFieldError(fieldName, message) {
-      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
-      if (!el) return;
-      el.classList.add('is-invalid');
-      let errDiv = el.parentNode.querySelector('.field-error');
-      if (!errDiv) {
-        errDiv = document.createElement('div');
-        errDiv.className = 'field-error';
-        el.parentNode.appendChild(errDiv);
-      }
-      errDiv.textContent = message;
-    }
-
-    function clearFieldError(fieldName) {
-      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
-      if (!el) return;
-      el.classList.remove('is-invalid');
-      const errDiv = el.parentNode && el.parentNode.querySelector('.field-error');
-      if (errDiv) errDiv.textContent = '';
-    }
-
-    function clearAllFieldErrors() {
-      document.querySelectorAll('.field-error').forEach(e => e.textContent = '');
-      document.querySelectorAll('.is-invalid').forEach(e => e.classList.remove('is-invalid'));
-    }
-
-    // ── Form initialisation ───────────────────────────────────────────────────
+    // ─── init ─────────────────────────────────────────────────────────────────
 
     async function initForm() {
       const container = document.getElementById('requestFormContainer');
@@ -292,48 +283,38 @@
       renderForm(container);
     }
 
+    // ─── render ───────────────────────────────────────────────────────────────
+
     function renderForm(container) {
-      const today = new Date().toISOString().split('T')[0];
-      const pack  = packType(selectedTemplate?.name);
+      const hasTemplate = !!selectedTemplate;
+      const today       = toYMD(new Date());
 
       container.innerHTML = `
         <form id="requestForm" novalidate>
 
-          <!-- ── Template info ── -->
-          ${selectedTemplate ? `
-            <div class="card" style="margin-bottom:20px; border-color:var(--cta);">
-              <p style="color:var(--cta); font-weight:600; margin-bottom:6px;">
-                Избран пакет: ${selectedTemplate.name}
-                <span style="font-weight:400; color:rgba(236,229,240,0.7);">
-                  · ${selectedTemplate.duration_days} дни · ${selectedTemplate.discount_percent}% отстъпка
-                </span>
-              </p>
-              ${pack !== 'standard' ? `<p class="date-hint" id="date-hint">${dateHintText(pack)}</p>` : ''}
+          ${hasTemplate ? `
+            <div class="template-badge">
+              📦 ${selectedTemplate.name}
+              &nbsp;·&nbsp; ${selectedTemplate.duration_days} дни
+              &nbsp;·&nbsp; ${selectedTemplate.discount_percent}% отстъпка
+              &nbsp;<a href="create-request.html" style="font-size:0.8rem;opacity:0.7;">✕ промени</a>
             </div>
-          ` : '<p id="date-hint" class="date-hint hidden" style="margin-bottom:10px;"></p>'}
+          ` : ''}
 
-          <!-- ── Dates ── -->
+          <!-- ── Date section ── -->
           <div class="card" style="margin-bottom:25px;">
-            <h3 style="color:var(--cta); margin-bottom:20px;">📅 Период на наем</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
-              <div class="form-group">
-                <label for="start_date">Начална дата *</label>
-                <input type="date" id="start_date" name="start_date" required min="${today}">
-              </div>
-              <div class="form-group">
-                <label for="end_date">Крайна дата *</label>
-                <input type="date" id="end_date" name="end_date" required min="${today}">
-              </div>
-            </div>
+            <h3 style="color:var(--cta); margin-bottom:6px;">📅 Период на наем</h3>
+
+            ${hasTemplate ? renderSlotPicker() : renderFreeDatePicker(today)}
           </div>
 
-          <!-- ── Car selection ── -->
+          <!-- ── Cars ── -->
           <div class="card" style="margin-bottom:25px;">
             <h3 style="color:var(--cta); margin-bottom:20px;">🚗 Изберете автомобили *</h3>
             <p style="margin-bottom:15px; color:rgba(236,229,240,0.7);">
               Изберете поне един автомобил (може повече):
             </p>
-            <div id="car-selection" name="car_ids" class="car-selection-grid">
+            <div id="car-selection" class="car-selection-grid">
               ${renderCarSelection()}
             </div>
             <div class="field-error" id="car-error"></div>
@@ -351,9 +332,9 @@
             </div>
           </div>
 
-          <!-- ── Live price ── -->
+          <!-- ── Price ── -->
           <div id="price-calculation" style="display:none;">
-            <div class="total-price" id="total-price">Обща цена: €0.00</div>
+            <div class="total-price" id="total-price"></div>
           </div>
 
           <div id="form-message"></div>
@@ -365,14 +346,145 @@
         </form>
       `;
 
-      // Attach listeners
-      document.getElementById('start_date').addEventListener('change', onDateChange);
-      document.getElementById('end_date').addEventListener('change', onDateChange);
-      document.getElementById('notes').addEventListener('input', onNotesInput);
+      // listeners
+      if (!hasTemplate) {
+        document.getElementById('start_date').addEventListener('change', onFreeDateChange);
+        document.getElementById('end_date').addEventListener('change', onFreeDateChange);
+      }
+      document.getElementById('notes').addEventListener('input', e => {
+        document.getElementById('notes-counter').textContent = `${e.target.value.length} / 1000`;
+      });
       document.getElementById('requestForm').addEventListener('submit', submitRequest);
-
-      applyDateRestrictions();
     }
+
+    // ─── slot picker (template active) ────────────────────────────────────────
+
+    function renderSlotPicker() {
+      const slots = generateSlots(selectedTemplate);
+      const pack  = packType(selectedTemplate.name);
+
+      const ruleLabel = pack === 'weekend'
+        ? 'Началото е винаги петък, краят — неделя.'
+        : pack === 'business'
+        ? 'Началото е винаги понеделник.'
+        : 'Изберете начална дата — продължителността е фиксирана.';
+
+      const slotsHtml = slots.length === 0
+        ? `<div class="no-slots">Няма налични дати в следващите 90 дни.</div>`
+        : slots.map(s => `
+            <div class="date-slot ${selectedSlot?.start === s.start ? 'selected' : ''}"
+                 onclick="selectSlot('${s.start}','${s.end}')">
+              <div class="slot-start">${formatBG(s.start)}</div>
+              <div class="slot-arrow">↓</div>
+              <div class="slot-end">${formatBG(s.end)}</div>
+              <div class="slot-nights">${nightsLabel(selectedTemplate.duration_days)}</div>
+            </div>`
+          ).join('');
+
+      const confirmedHtml = selectedSlot ? `
+        <div class="date-confirmed">
+          <div>
+            <div class="dc-label">Начало</div>
+            <div class="dc-value">${formatBG(selectedSlot.start)}</div>
+          </div>
+          <div style="font-size:1.4rem;opacity:0.4;">→</div>
+          <div>
+            <div class="dc-label">Край</div>
+            <div class="dc-value">${formatBG(selectedSlot.end)}</div>
+          </div>
+          <div style="margin-left:auto;">
+            <div class="dc-label">Продължителност</div>
+            <div class="dc-value">${nightsLabel(selectedTemplate.duration_days)}</div>
+          </div>
+        </div>` : '';
+
+      return `
+        <p style="color:rgba(236,229,240,0.6); font-size:0.88rem; margin-bottom:14px;">
+          ${ruleLabel}
+          Краят се изчислява автоматично.
+        </p>
+        <p style="font-weight:600; margin-bottom:8px;">Изберете начална дата:</p>
+        <div class="date-slots" id="slot-grid">${slotsHtml}</div>
+        <div class="field-error" id="slot-error"></div>
+        ${confirmedHtml}
+      `;
+    }
+
+    function selectSlot(start, end) {
+      selectedSlot = { start, end };
+      // Re-render only the slot section to reflect selection highlight
+      const card = document.querySelector('#requestForm .card');
+      card.querySelector('#slot-grid').querySelectorAll('.date-slot').forEach(el => {
+        el.classList.toggle('selected', el.getAttribute('onclick').includes(`'${start}'`));
+      });
+      // Update / insert confirmed bar
+      let bar = card.querySelector('.date-confirmed');
+      if (!bar) {
+        bar = document.createElement('div');
+        card.appendChild(bar);
+      }
+      bar.className = 'date-confirmed';
+      bar.innerHTML = `
+        <div>
+          <div class="dc-label">Начало</div>
+          <div class="dc-value">${formatBG(start)}</div>
+        </div>
+        <div style="font-size:1.4rem;opacity:0.4;">→</div>
+        <div>
+          <div class="dc-label">Край</div>
+          <div class="dc-value">${formatBG(end)}</div>
+        </div>
+        <div style="margin-left:auto;">
+          <div class="dc-label">Продължителност</div>
+          <div class="dc-value">${nightsLabel(selectedTemplate.duration_days)}</div>
+        </div>
+      `;
+      document.getElementById('slot-error').textContent = '';
+      updatePrice();
+    }
+
+    // ─── free date picker (no template) ───────────────────────────────────────
+
+    function renderFreeDatePicker(today) {
+      return `
+        <p style="color:rgba(236,229,240,0.6); font-size:0.88rem; margin-bottom:14px;">
+          Без избран пакет — изберете свободно начална и крайна дата.
+        </p>
+        <div class="free-dates">
+          <div class="form-group">
+            <label for="start_date">Начална дата *</label>
+            <input type="date" id="start_date" name="start_date" required min="${today}">
+          </div>
+          <div class="form-group">
+            <label for="end_date">Крайна дата *</label>
+            <input type="date" id="end_date" name="end_date" required min="${today}">
+          </div>
+        </div>
+      `;
+    }
+
+    function onFreeDateChange() {
+      clearAllFieldErrors();
+      const s = document.getElementById('start_date').value;
+      const e = document.getElementById('end_date').value;
+      if (s && e) {
+        const errs = validateFreeDates(s, e);
+        errs.forEach(err => showFieldError(err.field, err.message));
+      }
+      updatePrice();
+    }
+
+    function validateFreeDates(startStr, endStr) {
+      const errors = [];
+      const start  = parseLocal(startStr);
+      const end    = parseLocal(endStr);
+      const today  = new Date(); today.setHours(0,0,0,0);
+      if (start < today) errors.push({ field: 'start_date', message: 'Началната дата не може да бъде в миналото' });
+      if (end <= start)  errors.push({ field: 'end_date',   message: 'Крайната дата трябва да е след началната' });
+      return errors;
+    }
+
+    // ─── cars ─────────────────────────────────────────────────────────────────
 
     function renderCarSelection() {
       if (allCars.length === 0) return '<p>Няма налични автомобили</p>';
@@ -385,57 +497,38 @@
             <strong>${car.brand} ${car.model}</strong><br>
             <small>${LuxeAuto.ui.formatPrice(car.price_per_day)}/ден</small>
           </div>
-        </label>
-      `).join('');
+        </label>`).join('');
     }
 
     function toggleCar(checkbox) {
-      const id     = checkbox.value;
-      const parent = checkbox.closest('.car-checkbox');
-      if (checkbox.checked) {
-        if (!selectedCars.includes(id)) selectedCars.push(id);
-        parent.classList.add('selected');
-      } else {
-        selectedCars = selectedCars.filter(c => c !== id);
-        parent.classList.remove('selected');
-      }
-      // Clear car error on interaction (Task 3 UX)
+      const id = checkbox.value;
+      checkbox.closest('.car-checkbox').classList.toggle('selected', checkbox.checked);
+      if (checkbox.checked) { if (!selectedCars.includes(id)) selectedCars.push(id); }
+      else { selectedCars = selectedCars.filter(c => c !== id); }
       document.getElementById('car-error').textContent = '';
       updatePrice();
     }
 
-    // ── Date change handler (Task 1 + Task 3) ────────────────────────────────
+    // ─── price preview ────────────────────────────────────────────────────────
 
-    function onDateChange() {
-      clearAllFieldErrors();
-      const startStr = document.getElementById('start_date').value;
-      const endStr   = document.getElementById('end_date').value;
-
-      // Show live validation only once both are filled
-      if (startStr && endStr) {
-        const errs = validateDatesClient(startStr, endStr);
-        errs.forEach(e => showFieldError(e.field, e.message));
+    function getActiveDates() {
+      if (selectedTemplate) {
+        return selectedSlot ? { start: selectedSlot.start, end: selectedSlot.end } : null;
       }
-      updatePrice();
+      const s = document.getElementById('start_date')?.value;
+      const e = document.getElementById('end_date')?.value;
+      return (s && e) ? { start: s, end: e } : null;
     }
-
-    function onNotesInput(e) {
-      const counter = document.getElementById('notes-counter');
-      if (counter) counter.textContent = `${e.target.value.length} / 1000`;
-    }
-
-    // ── Live price preview ────────────────────────────────────────────────────
 
     function updatePrice() {
       const priceDiv = document.getElementById('price-calculation');
-      const startStr = document.getElementById('start_date')?.value;
-      const endStr   = document.getElementById('end_date')?.value;
-      if (!startStr || !endStr || selectedCars.length === 0) {
-        priceDiv.style.display = 'none'; return;
-      }
-      const start = new Date(startStr);
-      const end   = new Date(endStr);
-      const days  = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      if (!priceDiv) return;
+      const dates = getActiveDates();
+      if (!dates || selectedCars.length === 0) { priceDiv.style.display = 'none'; return; }
+
+      const start = parseLocal(dates.start);
+      const end   = parseLocal(dates.end);
+      const days  = Math.round((end - start) / 86400000) + 1;
       if (days <= 0) { priceDiv.style.display = 'none'; return; }
 
       let base = 0;
@@ -447,37 +540,61 @@
       const total    = base * days * (1 - discount / 100);
 
       document.getElementById('total-price').innerHTML = `
-        ${discount > 0 ? `
-          <div style="text-align:right;font-size:0.85rem;margin-bottom:4px;">
-            Пакет ${selectedTemplate.name} — ${discount}% отстъпка
-          </div>` : ''}
+        ${discount > 0 ? `<div style="text-align:right;font-size:0.85rem;margin-bottom:4px;">
+          Пакет ${selectedTemplate.name} — ${discount}% отстъпка</div>` : ''}
         ${LuxeAuto.ui.formatPrice(total)}
-        <span style="font-size:0.9rem;font-weight:normal;">
-          (${days} дни × ${selectedCars.length} кола)
-        </span>
+        <span style="font-size:0.9rem;font-weight:normal;">(${days} дни × ${selectedCars.length} кола)</span>
       `;
       priceDiv.style.display = 'block';
     }
 
-    // ── Form submit (Task 2 + Task 3) ─────────────────────────────────────────
+    // ─── field error helpers ──────────────────────────────────────────────────
+
+    function showFieldError(fieldName, message) {
+      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
+      if (!el) return;
+      el.classList.add('is-invalid');
+      let div = el.parentNode.querySelector('.field-error');
+      if (!div) { div = document.createElement('div'); div.className = 'field-error'; el.parentNode.appendChild(div); }
+      div.textContent = message;
+    }
+    function clearFieldError(fieldName) {
+      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
+      if (!el) return;
+      el.classList.remove('is-invalid');
+      const div = el.parentNode?.querySelector('.field-error');
+      if (div) div.textContent = '';
+    }
+    function clearAllFieldErrors() {
+      document.querySelectorAll('.field-error').forEach(e => e.textContent = '');
+      document.querySelectorAll('.is-invalid').forEach(e => e.classList.remove('is-invalid'));
+    }
+
+    // ─── submit ───────────────────────────────────────────────────────────────
 
     async function submitRequest(e) {
       e.preventDefault();
-      if (isSubmitting) return; // prevent double-submit (Task 3)
+      if (isSubmitting) return;
 
       clearAllFieldErrors();
       const msgDiv    = document.getElementById('form-message');
       const submitBtn = document.getElementById('submit-btn');
       msgDiv.innerHTML = '';
 
-      const startStr = document.getElementById('start_date').value;
-      const endStr   = document.getElementById('end_date').value;
-
-      // Client-side date validation (Task 1 + Task 3)
-      const dateErrors = validateDatesClient(startStr, endStr);
-      if (dateErrors.length) {
-        dateErrors.forEach(err => showFieldError(err.field, err.message));
-        return;
+      // Validate dates
+      let startStr, endStr;
+      if (selectedTemplate) {
+        if (!selectedSlot) {
+          document.getElementById('slot-error').textContent = 'Моля, изберете начална дата от списъка';
+          return;
+        }
+        startStr = selectedSlot.start;
+        endStr   = selectedSlot.end;
+      } else {
+        startStr = document.getElementById('start_date').value;
+        endStr   = document.getElementById('end_date').value;
+        const errs = validateFreeDates(startStr, endStr);
+        if (errs.length) { errs.forEach(err => showFieldError(err.field, err.message)); return; }
       }
 
       if (selectedCars.length === 0) {
@@ -485,7 +602,7 @@
         return;
       }
 
-      // Loading state — prevents click-spamming (Task 3)
+      // Loading guard
       isSubmitting = true;
       submitBtn.classList.add('btn-loading');
       submitBtn.textContent = 'Изпращане...';
@@ -508,18 +625,15 @@
           </div>`;
 
         document.getElementById('requestForm').reset();
-        selectedCars = [];
+        selectedCars = []; selectedSlot = null;
         document.getElementById('price-calculation').style.display = 'none';
-        document.getElementById('car-selection').innerHTML = renderCarSelection();
+        renderForm(document.getElementById('requestFormContainer'));
 
       } catch (error) {
-        // Map server-side error details back to fields (Task 3 — specific messages)
         if (error.details && Array.isArray(error.details)) {
           error.details.forEach(d => showFieldError(d.field, d.message));
-          msgDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
-        } else {
-          msgDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
         }
+        msgDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
       } finally {
         isSubmitting = false;
         submitBtn.classList.remove('btn-loading');
@@ -527,7 +641,7 @@
       }
     }
 
-    // ── Init ──────────────────────────────────────────────────────────────────
+    // ─── boot ─────────────────────────────────────────────────────────────────
 
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
