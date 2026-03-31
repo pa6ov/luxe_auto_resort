@@ -47,6 +47,8 @@ CREATE TABLE IF NOT EXISTS cars (
     image_url     VARCHAR(500),
     description   TEXT,
     available     BOOLEAN DEFAULT TRUE,   -- FALSE = under maintenance / inactive
+    status        ENUM('available', 'unavailable', 'rented') DEFAULT 'available',
+    rented_until  DATETIME NULL DEFAULT NULL,
     created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -54,6 +56,7 @@ CREATE TABLE IF NOT EXISTS cars (
     INDEX idx_model     (model),
     INDEX idx_price     (price_per_day),
     INDEX idx_available (available),
+    INDEX idx_status    (status),
     INDEX idx_type      (type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -456,11 +459,18 @@ ALTER TABLE cars
   ADD COLUMN unavailable_until  DATE         NULL DEFAULT NULL
     COMMENT 'End of admin-set maintenance / unavailability window (inclusive)',
   ADD COLUMN unavailable_reason VARCHAR(255) NULL DEFAULT NULL
-    COMMENT 'Human-readable reason shown to clients (e.g. Техническа поддръжка)';
+    COMMENT 'Human-readable reason shown to clients (e.g. Техническа поддръжка)',
+  ADD COLUMN status             ENUM('available', 'unavailable', 'rented') DEFAULT 'available'
+    COMMENT 'Primary source of truth for current availability status',
+  ADD COLUMN rented_until       DATETIME     NULL DEFAULT NULL
+    COMMENT 'Used to auto-clear the rented status';
 
 -- Index so the availability query can filter on the window quickly
 ALTER TABLE cars
-  ADD INDEX idx_unavail_window (unavailable_from, unavailable_until);
+  ADD INDEX idx_unavail_window (unavailable_from, unavailable_until),
+  ADD INDEX idx_status (status);
 
 -- Verify
 SHOW COLUMNS FROM cars LIKE 'unavailable%';
+SHOW COLUMNS FROM cars LIKE 'status';
+SHOW COLUMNS FROM cars LIKE 'rented_until';

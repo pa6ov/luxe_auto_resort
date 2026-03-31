@@ -486,15 +486,17 @@
         <div class="avail-section">
           <div class="avail-section-title">Статус на автомобила</div>
 
-          <div class="status-toggle">
-            <button type="button" class="status-pill pill-available active-pill" id="pillAvailable"
-              onclick="setCarStatus('available')">
-              ✅ Наличен
-            </button>
-            <button type="button" class="status-pill pill-maintenance" id="pillMaintenance"
-              onclick="setCarStatus('maintenance')">
-              🔧 Недостъпен / Поддръжка
-            </button>
+          <div id="rentedWarning" class="alert alert-warning hidden" style="margin-bottom: 15px; background: rgba(233, 138, 21, 0.1); border: 1px solid rgba(233, 138, 21, 0.4); border-radius: 6px; padding: 10px;">
+            ⚠️ Автомобилът е резервиран до <span id="rentedUntilText"></span>. Не може да бъде маркиран като наличен.
+          </div>
+
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label for="carStatusDropdown">Текущ статус</label>
+            <select id="carStatusDropdown" onchange="handleStatusChange()" style="width:100%; padding:11px 14px; border-radius:8px; background:rgba(255,255,255,0.04); border:1px solid rgba(75,136,162,0.3); color:#ECE5F0;">
+              <option value="available">Наличен</option>
+              <option value="unavailable">Недостъпен / Поддръжка</option>
+              <option value="rented" disabled>Зает (Резервиран)</option>
+            </select>
           </div>
 
           <!-- Existing window info (shown when editing) -->
@@ -583,23 +585,18 @@
       });
     }
 
-    // ── Status toggle ──────────────────────────────────────────────────────
+    // ── Status dropdown logic ──────────────────────────────────────────────
     let carStatusMode = 'available';
 
-    function setCarStatus(mode) {
-      carStatusMode = mode;
-      const pillA = document.getElementById('pillAvailable');
-      const pillM = document.getElementById('pillMaintenance');
+    function handleStatusChange() {
+      const mode = document.getElementById('carStatusDropdown').value;
+      carStatusMode = mode === 'rented' ? 'available' : mode; // Map rented back to available for form logic if manipulated, but handled on backend mostly
       const fields = document.getElementById('maintFields');
 
-      if (mode === 'available') {
-        pillA.classList.add('active-pill');
-        pillM.classList.remove('active-pill');
+      if (mode === 'available' || mode === 'rented') {
         fields.classList.add('hidden');
         document.getElementById('carAvailableHidden').value = 'true';
       } else {
-        pillM.classList.add('active-pill');
-        pillA.classList.remove('active-pill');
         fields.classList.remove('hidden');
         document.getElementById('carAvailableHidden').value = 'true';
         if (!fpMaintFrom) initMaintPickers();
@@ -615,7 +612,8 @@
           unavailable_from: null, unavailable_until: null, unavailable_reason: null
         });
         document.getElementById('currentWindowBox').classList.remove('show');
-        setCarStatus('available');
+        document.getElementById('carStatusDropdown').value = 'available';
+        handleStatusChange();
         if (fpMaintFrom) fpMaintFrom.clear();
         if (fpMaintUntil) fpMaintUntil.clear();
         document.getElementById('maintReason').value = '';
@@ -664,7 +662,13 @@
         tbody.innerHTML = cars.map(c => {
           const inMaint = c.unavailable_from && c.unavailable_until && c.unavailable_from <= today && c.unavailable_until >= today;
           const hasFuture = c.unavailable_from && c.unavailable_until && c.unavailable_from > today;
-          const statusCell = c.available ? '<span class="status status-approved">✅ Наличен</span>' : '<span class="status status-rejected">❌ Неактивен</span>';
+          let statusLabel = '';
+          if (c.status === 'available') statusLabel = '<span class="status status-approved">✅ Наличен</span>';
+          else if (c.status === 'unavailable') statusLabel = '<span class="status status-rejected">🔧 Недостъпен</span>';
+          else if (c.status === 'rented') statusLabel = `<span class="status status-pending" style="background:rgba(233,138,21,0.2);color:#E98A15;">🚗 Зает ` + (c.rented_until ? `(до ${fmtDate(c.rented_until)})` : '') + `</span>`;
+          else statusLabel = '<span class="status status-rejected">Неактивен</span>';
+
+          const statusCell = statusLabel;
           let maintCell = '—';
           if (inMaint) {
             maintCell = `<span class="maint-badge"><span class="maint-badge-dot"></span>До ${fmtDate(c.unavailable_until)}</span>`
@@ -706,12 +710,27 @@
       document.getElementById('maintUntil').value = '';
       document.getElementById('maintReason').value = '';
 
-      // Reset status UI to available
-      carStatusMode = 'available';
-      document.getElementById('pillAvailable').classList.add('active-pill');
-      document.getElementById('pillMaintenance').classList.remove('active-pill');
+      // Reset status UI
+      carStatusMode = car?.status || 'available';
+      if (carStatusMode === 'rented') {
+        // User cannot manually set back to available if rented without using the system
+        document.getElementById('rentedWarning').classList.remove('hidden');
+        document.getElementById('rentedUntilText').textContent = fmtDate(car.rented_until);
+        document.getElementById('carStatusDropdown').innerHTML = `
+          <option value="rented" selected>Зает (до ${fmtDate(car.rented_until)})</option>
+          <option value="unavailable">Недостъпен / Поддръжка</option>
+        `;
+      } else {
+        document.getElementById('rentedWarning').classList.add('hidden');
+        document.getElementById('carStatusDropdown').innerHTML = `
+          <option value="available" ${carStatusMode === 'available' ? 'selected' : ''}>Наличен</option>
+          <option value="unavailable" ${carStatusMode === 'unavailable' ? 'selected' : ''}>Недостъпен / Поддръжка</option>
+        `;
+      }
+
       document.getElementById('maintFields').classList.add('hidden');
       document.getElementById('carAvailableHidden').value = 'true';
+      handleStatusChange();
       document.getElementById('currentWindowBox').classList.remove('show');
 
       // If car already has a window, show the info box
@@ -749,7 +768,8 @@
         fuel_type: document.getElementById('carFuel').value,
         image_url: document.getElementById('carImage').value,
         description: document.getElementById('carDesc').value,
-        available: document.getElementById('carAvailableHidden').value === 'true',
+        available: true,
+        status: document.getElementById('carStatusDropdown').value,
       };
 
       try {

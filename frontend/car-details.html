@@ -236,47 +236,45 @@
 
         // ── Determine display state ──────────────────────────────────────
         const today = new Date().toISOString().split('T')[0];
-        const inMaint = car.in_maintenance;
-        const isSystemBooked = !inMaint && car.next_available_date && !car.available;
-        const isFree = car.available && !inMaint;
+        const isUnavailable = car.status === 'unavailable';
+        const isRented = car.status === 'rented';
+        const isFree = car.status === 'available';
 
         // ── Status pill ──────────────────────────────────────────────────
         let pillHtml = '';
         if (isFree) {
-          pillHtml = `<span class="avail-pill free"><span class="avail-pill-dot"></span>Наличен</span>`;
-        } else if (inMaint) {
-          pillHtml = `<span class="avail-pill maint"><span class="avail-pill-dot"></span>В поддръжка</span>`;
-        } else {
-          pillHtml = `<span class="avail-pill booked"><span class="avail-pill-dot"></span>Зает</span>`;
+          pillHtml = `<span class="avail-pill free"><span class="avail-pill-dot"></span>Ready for Rent</span>`;
+        } else if (isUnavailable) {
+          pillHtml = `<span class="avail-pill maint" style="background:rgba(108,117,125,0.15); border-color:rgba(108,117,125,0.35); color:#adb5bd;"><span class="avail-pill-dot" style="background:#adb5bd;"></span>Currently Out of Service</span>`;
+        } else if (isRented) {
+          pillHtml = `<span class="avail-pill booked" style="background:rgba(233,138,21,0.15); border-color:rgba(233,138,21,0.35); color:#E98A15;"><span class="avail-pill-dot" style="background:#E98A15;"></span>Rented until ${fmtISO(car.rented_until)}</span>`;
         }
 
         // ── Unavailability notice block ──────────────────────────────────
         let noticeHtml = '';
 
-        if (inMaint) {
-          const reason = car.unavailable_reason || 'Техническа поддръжка';
+        if (isUnavailable) {
+          const reason = car.unavailable_reason || 'Currently Out of Service';
           const untilStr = car.unavailable_until ? fmtISO(car.unavailable_until) : null;
-          const nextFree = car.next_available_date ? fmtISO(car.next_available_date) : null;
 
           noticeHtml = `
-            <div class="unavail-notice">
-              <div class="unavail-notice-icon">🔧</div>
+            <div class="unavail-notice" style="background:linear-gradient(135deg,rgba(108,117,125,0.1),rgba(108,117,125,0.04));border-color:rgba(108,117,125,0.3);border-left-color:#6c757d;">
+              <div class="unavail-notice-icon" style="color:#6c757d;">🔧</div>
               <div class="unavail-notice-body">
-                <h4>${reason}</h4>
+                <h4 style="color:#adb5bd;">${reason}</h4>
                 <p>Автомобилът временно не е достъпен за резервации.${untilStr ? ` Планирана поддръжка до <strong>${untilStr}</strong>.` : ''}</p>
-                ${nextFree ? `<div class="next-avail">Свободен от: ${nextFree}</div>` : ''}
               </div>
             </div>`;
 
-        } else if (!isFree && car.next_available_date) {
-          const nextFree = fmtISO(car.next_available_date);
+        } else if (isRented) {
+          const nextFree = fmtISO(car.rented_until);
           noticeHtml = `
-            <div class="unavail-notice booked-notice">
+            <div class="unavail-notice booked-notice" style="background:linear-gradient(135deg,rgba(233,138,21,0.1),rgba(233,138,21,0.04));border-color:rgba(233,138,21,0.3);border-left-color:#E98A15;">
               <div class="unavail-notice-icon">📅</div>
               <div class="unavail-notice-body">
-                <h4>Автомобилът е зает</h4>
+                <h4 style="color:#E98A15;">Автомобилът е зает</h4>
                 <p>Има активна резервация за този автомобил в момента.</p>
-                <div class="next-avail">Свободен от: ${nextFree}</div>
+                <div class="next-avail" style="background:rgba(233,138,21,0.1);color:#E98A15;border-color:rgba(233,138,21,0.3);">Свободен след: ${nextFree}</div>
               </div>
             </div>`;
         }
@@ -285,16 +283,8 @@
         let ctaHtml = '';
         if (isFree) {
           ctaHtml = `<a href="create-request.html?car=${car.id}" class="btn btn-primary btn-lg" style="width:100%;">Наеми сега</a>`;
-        } else if (car.next_available_date) {
-          ctaHtml = `
-            <div class="alert alert-warning" style="margin-bottom:12px;">
-              Свободен от ${fmtISO(car.next_available_date)} — можете да резервирате за тази и следващи дати.
-            </div>
-            <a href="create-request.html?car=${car.id}" class="btn btn-outline btn-lg" style="width:100%;">
-              Резервирай за по-късна дата
-            </a>`;
         } else {
-          ctaHtml = `<div class="alert alert-warning">Автомобилът не е достъпен в момента.</div>`;
+          ctaHtml = `<button class="btn btn-secondary btn-lg" style="width:100%; cursor:not-allowed; opacity:0.6;" disabled>Check back later</button>`;
         }
 
         // ── Full detail layout ───────────────────────────────────────────

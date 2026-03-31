@@ -858,12 +858,15 @@
       const hasDateFilter = activeDateRange.start && activeDateRange.end;
       const isAvail = car.is_available_for_period;
 
-      // Badge HTML
+      // Badge HTML based on new status rules
       let badgeHtml = '';
-      if (hasDateFilter) {
-        badgeHtml = isAvail
-          ? '<span class="avail-badge free">✓ Свободен</span>'
-          : '<span class="avail-badge booked">✕ Зает</span>';
+      if (car.status === 'unavailable') {
+         badgeHtml = '<span class="avail-badge booked" style="background:#6c757d; box-shadow:none;">Currently Out of Service</span>';
+      } else if (car.status === 'rented') {
+         const until = car.rented_until ? car.rented_until.split('T')[0].split('-').reverse().join('.') : '';
+         badgeHtml = `<span class="avail-badge booked" style="background:#E98A15; box-shadow: 0 2px 10px rgba(233,138,21,0.35);">Rented until ${until}</span>`;
+      } else {
+         badgeHtml = '<span class="avail-badge free">Ready for Rent</span>';
       }
 
       // Total price chip
@@ -877,13 +880,20 @@
         `;
       }
 
-      // Rent button – disabled for booked cars when dates are selected
-      const rentHref = hasDateFilter && isAvail
-        ? `create-request.html?car=${car.id}&start=${activeDateRange.start}&end=${activeDateRange.end}`
-        : `car-details.html?id=${car.id}`;
-      const rentLabel = hasDateFilter && isAvail ? 'Резервирай' : 'Виж детайли';
+      // Rent button logic
+      const isUnavailable = car.status === 'unavailable' || car.status === 'rented';
+      let btnHtml = '';
+      if (isUnavailable) {
+        btnHtml = `<button class="btn btn-secondary" style="width:100%; cursor:not-allowed; opacity:0.6;" disabled>Check back later</button>`;
+      } else {
+        const rentHref = hasDateFilter && isAvail
+          ? `create-request.html?car=${car.id}&start=${activeDateRange.start}&end=${activeDateRange.end}`
+          : `car-details.html?id=${car.id}`;
+        const rentLabel = hasDateFilter && isAvail ? 'Резервирай' : 'Виж детайли';
+        btnHtml = `<a href="${rentHref}" class="btn btn-primary" style="width:100%">${rentLabel}</a>`;
+      }
 
-      const cardClass = hasDateFilter && !isAvail ? 'car-card car-booked' : 'car-card';
+      const cardClass = isUnavailable || (hasDateFilter && !isAvail) ? 'car-card car-booked' : 'car-card';
 
       return `
         <div class="${cardClass}" data-id="${car.id}">
@@ -902,7 +912,7 @@
             </div>
             ${priceChipHtml}
             <p class="car-price">${ui.formatPrice(car.price_per_day)} <span>/ ден</span></p>
-            <a href="${rentHref}" class="btn btn-primary" style="width:100%">${rentLabel}</a>
+            ${btnHtml}
           </div>
         </div>
       `;

@@ -164,6 +164,22 @@ function getLocalIP() {
 const PORT = 3000;
 const localIP = getLocalIP();
 
+// Background Task: Auto-clear expired rentals
+setInterval(async () => {
+  try {
+    const [result] = await pool.query(
+      `UPDATE cars 
+       SET status = 'available', rented_until = NULL 
+       WHERE status = 'rented' AND rented_until < NOW()`
+    );
+    if (result.affectedRows > 0) {
+      console.log(`[Auto-Status] Reset ${result.affectedRows} expired rental(s) to 'available'.`);
+    }
+  } catch (err) {
+    console.error('[Auto-Status] Background task error:', err);
+  }
+}, 60 * 60 * 1000); // Check every hour
+
 const server = app.listen(PORT, "0.0.0.0", () => {
   console.log('\n🚀 Server running on port ' + PORT);
   console.log('\n📱 Open in browser:');

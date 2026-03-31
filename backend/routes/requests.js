@@ -84,6 +84,20 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     });
   }
 
+  // ── Step 2.5: Check new status flag ─────────────────────────────────────────
+  const unavailableStatus = cars.filter(c => c.status !== 'available');
+  if (unavailableStatus.length > 0) {
+    const names = unavailableStatus.map(c => `${c.brand} ${c.model}`).join(', ');
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: `Следните автомобили не са достъпни (статус: ${unavailableStatus[0].status}): ${names}`,
+        code: ErrorCodes.INVALID_VALUE,
+        details: [{ field: 'car_ids', message: `Не е достъпен: ${names}` }],
+      },
+    });
+  }
+
   // ── Step 3: Check maintenance window overlap for the requested period ─────────
   //
   // A car is blocked by maintenance if:
@@ -265,6 +279,21 @@ router.patch('/:id/status', requireAuth, requireAdmin, asyncHandler(async (req, 
 
   if (!result.affectedRows)
     return res.status(404).json({ success: false, error: { message: 'Заявката не е намерена', code: ErrorCodes.NOT_FOUND } });
+
+  // Auto-update associated cars status if approved
+  if (status === 'approved') {
+    const [requestRows] = await pool.query('SELECT end_date FROM rental_requests WHERE id = ?', [requestId]);
+    if (requestRows.length > 0) {
+      const endDate = requestRows[0].end_date;
+      await pool.query(
+        `UPDATE cars c
+         JOIN request_cars rc ON c.id = rc.car_id
+         SET c.status = 'rented', c.rented_until = ?
+         WHERE rc.request_id = ?`,
+        [endDate, requestId]
+      );
+    }
+  }
 
   res.json({ success: true, message: 'Статусът е обновен успешно' });
 }));

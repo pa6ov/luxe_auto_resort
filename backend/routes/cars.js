@@ -419,7 +419,7 @@ router.patch('/:id/availability', requireAuth, requireAdmin, asyncHandler(async 
 // ─── POST /api/cars  (admin) ──────────────────────────────────────────────────
 router.post('/', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const { brand, model, year, license_plate, price_per_day, type, seats,
-    transmission, fuel_type, mileage, image_url, description, available } = req.body;
+    transmission, fuel_type, mileage, image_url, description, available, status } = req.body;
 
   const errors = validateCarInput(req.body, false);
   if (errors.length)
@@ -427,11 +427,11 @@ router.post('/', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
 
   const [result] = await pool.query(
     `INSERT INTO cars (brand, model, year, license_plate, price_per_day, type, seats,
-                       transmission, fuel_type, mileage, image_url, description, available)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                       transmission, fuel_type, mileage, image_url, description, available, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [brand, model, year, license_plate || null, price_per_day,
       type || 'sedan', seats || 5, transmission || 'automatic', fuel_type || 'petrol',
-      mileage || 0, image_url || null, description || null, available !== false]
+      mileage || 0, image_url || null, description || null, available !== false, status || 'available']
   );
   res.status(201).json({ success: true, message: 'Автомобилът е създаден успешно', id: result.insertId });
 }));
@@ -443,7 +443,7 @@ router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
     return res.status(400).json({ success: false, error: { message: 'Невалидно ID', code: ErrorCodes.INVALID_VALUE } });
 
   const { brand, model, year, license_plate, price_per_day, type, seats,
-    transmission, fuel_type, mileage, image_url, description, available } = req.body;
+    transmission, fuel_type, mileage, image_url, description, available, status } = req.body;
 
   const errors = validateCarInput(req.body, true);
   if (errors.length)
@@ -452,9 +452,9 @@ router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const [result] = await pool.query(
     `UPDATE cars SET brand=?, model=?, year=?, license_plate=?, price_per_day=?,
                      type=?, seats=?, transmission=?, fuel_type=?, mileage=?,
-                     image_url=?, description=?, available=? WHERE id=?`,
+                     image_url=?, description=?, available=?, status=? WHERE id=?`,
     [brand, model, year, license_plate, price_per_day, type, seats,
-      transmission, fuel_type, mileage, image_url, description, available, carId]
+      transmission, fuel_type, mileage, image_url, description, available, status || 'available', carId]
   );
 
   if (!result.affectedRows)
