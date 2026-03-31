@@ -1,134 +1,142 @@
 <!DOCTYPE html>
 <html lang="bg">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Създай заявка - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
-    /* ── Date slot grid ── */
-    .date-slots {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
-      gap: 10px;
-      margin-top: 12px;
-    }
-    .date-slot {
-      background: var(--card);
-      border: 2px solid rgba(75,136,162,0.25);
-      border-radius: var(--border-radius);
-      padding: 12px 10px;
-      cursor: pointer;
-      text-align: center;
-      transition: var(--transition);
-      user-select: none;
-    }
-    .date-slot:hover {
-      border-color: var(--accent);
-      background: rgba(75,136,162,0.15);
-    }
-    .date-slot.selected {
-      border-color: var(--cta);
-      background: rgba(233,138,21,0.15);
-    }
-    .date-slot .slot-start {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--text-light);
-    }
-    .date-slot .slot-arrow {
-      font-size: 0.75rem;
-      color: rgba(236,229,240,0.5);
-      margin: 3px 0;
-    }
-    .date-slot .slot-end {
-      font-size: 0.9rem;
-      color: var(--accent);
-    }
-    .date-slot .slot-nights {
-      font-size: 0.75rem;
-      color: rgba(236,229,240,0.5);
-      margin-top: 3px;
-    }
-    .date-slot.selected .slot-start,
-    .date-slot.selected .slot-end { color: var(--cta); }
-
-    /* Free date pickers (no template) */
-    .free-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-    @media (max-width: 560px) { .free-dates { grid-template-columns: 1fr; } }
-
-    /* Template badge */
-    .template-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      background: rgba(233,138,21,0.12);
-      border: 1px solid rgba(233,138,21,0.4);
-      border-radius: 20px;
-      padding: 6px 14px;
-      font-size: 0.9rem;
-      color: var(--cta);
-      margin-bottom: 16px;
+    body {
+      font-family: 'DM Sans', sans-serif;
     }
 
-    /* Confirmed date display */
-    .date-confirmed {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 14px 18px;
-      background: rgba(75,136,162,0.1);
-      border: 1px solid rgba(75,136,162,0.3);
-      border-radius: var(--border-radius);
-      margin-top: 14px;
-    }
-    .date-confirmed .dc-label { font-size: 0.8rem; color: rgba(236,229,240,0.55); }
-    .date-confirmed .dc-value { font-size: 1.05rem; font-weight: 600; }
-
-    /* Loading / submit guard */
-    .btn-loading { pointer-events: none; opacity: 0.75; }
-    .btn-loading::after {
-      content: '';
-      display: inline-block;
-      width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.6);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-      margin-left: 10px;
-      vertical-align: middle;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Field errors */
-    .field-error { color: var(--danger); font-size: 0.82rem; margin-top: 4px; }
-    .form-group input.is-invalid { border-color: var(--danger); }
-
-    /* Car grid */
+    /* ── Car selection grid ──────────────────────────────────── */
     .car-selection-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 15px;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
     }
-    .car-checkbox {
-      display: flex; align-items: center; gap: 10px;
-      padding: 12px; background: var(--card);
-      border-radius: var(--border-radius);
-      cursor: pointer; border: 2px solid transparent;
-      transition: var(--transition);
-    }
-    .car-checkbox:hover  { background: rgba(75,136,162,0.15); }
-    .car-checkbox.selected { border-color: var(--accent); background: rgba(75,136,162,0.2); }
-    .car-checkbox input  { width: 20px; height: 20px; accent-color: var(--accent); }
 
-    .no-slots {
-      padding: 20px;
-      color: rgba(236,229,240,0.55);
-      font-size: 0.95rem;
-      text-align: center;
+    /* Selectable car tile */
+    .car-tile {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--card, #252525);
+      border: 1px solid rgba(75, 136, 162, 0.2);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      user-select: none;
+    }
+
+    .car-tile:hover:not(.car-tile--blocked) {
+      border-color: var(--accent, #4B88A2);
+      background: rgba(75, 136, 162, 0.1);
+    }
+
+    .car-tile input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent, #4B88A2);
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .car-tile-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .car-tile-name {
+      font-weight: 500;
+      font-size: 0.92rem;
+      color: var(--text-light, #ECE5F0);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .car-tile-price {
+      font-size: 0.82rem;
+      color: var(--cta, #E98A15);
+      margin-top: 2px;
+    }
+
+    /* Selected state */
+    .car-tile.car-tile--selected {
+      border-color: var(--accent, #4B88A2);
+      background: rgba(75, 136, 162, 0.15);
+      box-shadow: 0 0 0 1px rgba(75, 136, 162, 0.35);
+    }
+
+    /* Blocked / maintenance tile */
+    .car-tile--blocked {
+      opacity: 0.45;
+      cursor: not-allowed;
+      border-color: rgba(220, 53, 69, 0.2);
+    }
+
+    .car-tile--blocked:hover {
+      border-color: rgba(220, 53, 69, 0.2);
+      background: var(--card, #252525);
+    }
+
+    .car-tile-blocked-label {
+      font-size: 0.72rem;
+      color: #f08080;
+      margin-top: 3px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Price chip ──────────────────────────────────────────── */
+    .price-chip {
+      background: linear-gradient(135deg, rgba(233, 138, 21, 0.18), rgba(233, 138, 21, 0.06));
+      border: 1px solid rgba(233, 138, 21, 0.35);
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .price-chip.show {
+      display: block;
+    }
+
+    .price-chip-amount {
+      font-size: 1.9rem;
+      font-weight: 600;
+      color: var(--cta, #E98A15);
+      line-height: 1;
+    }
+
+    .price-chip-detail {
+      font-size: 0.82rem;
+      color: rgba(236, 229, 240, 0.5);
+      margin-top: 5px;
+    }
+
+    .price-chip-discount {
+      display: inline-block;
+      background: rgba(40, 167, 69, 0.15);
+      border: 1px solid rgba(40, 167, 69, 0.3);
+      color: #6fcf97;
+      border-radius: 5px;
+      padding: 2px 9px;
+      font-size: 0.78rem;
+      margin-top: 6px;
     }
   </style>
 </head>
+
 <body>
   <header>
     <div class="container">
@@ -155,7 +163,7 @@
 
   <section>
     <div class="container">
-      <div id="requestFormContainer" style="max-width:800px; margin:0 auto;">
+      <div id="requestFormContainer" style="max-width:820px;margin:0 auto;">
         <div class="loading">Зареждане...</div>
       </div>
     </div>
@@ -171,482 +179,338 @@
 
   <script src="js/main.js"></script>
   <script>
-    // ─── globals ──────────────────────────────────────────────────────────────
-    const urlParams       = new URLSearchParams(window.location.search);
-    const preselectedTmpl = urlParams.get('template');
-    const preselectedCar  = urlParams.get('car');
+    // ── URL params ─────────────────────────────────────────────────────────
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedTemplate = urlParams.get('template');
+    const preselectedCar = urlParams.get('car');
+    const preselectedStart = urlParams.get('start');   // passed from cars.html date search
+    const preselectedEnd = urlParams.get('end');
 
     if (!LuxeAuto.auth.isLoggedIn()) {
       window.location.href = 'login.html?redirect=create-request.html';
     }
 
-    let selectedCars     = [];
-    let selectedTemplate = null;   // full template object from API
-    let allCars          = [];
-    let isSubmitting     = false;
+    // ── State ──────────────────────────────────────────────────────────────
+    let selectedCars = [];
+    let selectedTemplate = null;
+    let allCars = [];   // full list with effective_available
 
-    // Selected slot when a template is active: { start, end } YYYY-MM-DD strings
-    let selectedSlot     = null;
-
-    // ─── pack helpers ─────────────────────────────────────────────────────────
-
-    function packType(name) {
-      if (!name) return 'standard';
-      const n = name.toLowerCase();
-      if (n.includes('уикенд') || n.includes('weekend'))   return 'weekend';
-      if (n.includes('бизнес') || n.includes('business'))  return 'business';
-      return 'standard';
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const [y, m, d] = iso.split('-');
+      return `${d}.${m}.${y}`;
     }
 
-    // ─── date utilities (timezone-safe) ──────────────────────────────────────
-
-    /** Parse YYYY-MM-DD as local noon so .getDay() never shifts */
-    function parseLocal(str) {
-      const [y, m, d] = str.split('-').map(Number);
-      return new Date(y, m - 1, d, 12, 0, 0);
-    }
-
-    /** Format a Date to YYYY-MM-DD using local calendar */
-    function toYMD(date) {
-      const y  = date.getFullYear();
-      const m  = String(date.getMonth() + 1).padStart(2, '0');
-      const d  = String(date.getDate()).padStart(2, '0');
-      return `${y}-${m}-${d}`;
-    }
-
-    /** Human-readable Bulgarian date: "27 мар 2026 (пет)" */
-    const BG_MONTHS = ['яну','фев','мар','апр','май','юни',
-                       'юли','авг','сеп','окт','ное','дек'];
-    const BG_DAYS   = ['нед','пон','вт','ср','чет','пет','съб'];
-
-    function formatBG(dateStr) {
-      const d = parseLocal(dateStr);
-      return `${d.getDate()} ${BG_MONTHS[d.getMonth()]} ${d.getFullYear()} (${BG_DAYS[d.getDay()]})`;
-    }
-
-    function nightsLabel(n) {
-      if (n === 1) return '1 нощувка';
-      if (n < 5)   return `${n} нощувки`;
-      return `${n} нощувки`;
-    }
-
-    // ─── generate valid start slots for a template ────────────────────────────
-    //
-    //  Weekend  (Уикенд)  → starts must be FRIDAY
-    //  Business (Бизнес)  → starts must be MONDAY
-    //  Standard (Седмичен)→ any day is fine
-    //
-    //  End date = start + duration_days - 1  (fixed, no user choice)
-
-    function generateSlots(template, daysAhead = 90) {
-      const pack     = packType(template.name);
-      const duration = template.duration_days;   // from DB
-      const slots    = [];
-      const base     = new Date();
-      base.setHours(12, 0, 0, 0);
-
-      for (let i = 1; i <= daysAhead; i++) {
-        const d = new Date(base);
-        d.setDate(base.getDate() + i);
-        const dow = d.getDay();            // 0=Sun 1=Mon … 5=Fri 6=Sat
-
-        if (pack === 'weekend'  && dow !== 5) continue;   // Friday only
-        if (pack === 'business' && dow !== 1) continue;   // Monday only
-
-        const endD = new Date(d);
-        endD.setDate(d.getDate() + duration - 1);
-
-        slots.push({ start: toYMD(d), end: toYMD(endD) });
-        if (slots.length >= 12) break;    // show max 12 options
-      }
-      return slots;
-    }
-
-    // ─── init ─────────────────────────────────────────────────────────────────
-
+    // ── Init ───────────────────────────────────────────────────────────────
     async function initForm() {
       const container = document.getElementById('requestFormContainer');
 
-      if (preselectedTmpl) {
-        try {
-          selectedTemplate = await LuxeAuto.api.get(`/templates/${preselectedTmpl}`);
-        } catch (e) { console.error('Template not found'); }
+      if (preselectedTemplate) {
+        try { selectedTemplate = await LuxeAuto.api.get(`/templates/${preselectedTemplate}`); }
+        catch (e) { console.warn('Template not found', e); }
       }
 
-      try { allCars = await LuxeAuto.api.get('/cars?available=true'); }
-      catch (e) { allCars = []; }
+      // Fetch ALL cars — no available=true filter here.
+      // We use effective_available from the API to decide what to show/block.
+      try {
+        allCars = await LuxeAuto.api.get('/cars');
+      } catch (e) {
+        container.innerHTML = `<div class="alert alert-error">${e.message}</div>`;
+        return;
+      }
 
-      if (preselectedCar && !selectedCars.includes(preselectedCar)) {
-        selectedCars.push(preselectedCar);
+      // Pre-select car from URL if it is actually available
+      if (preselectedCar) {
+        const car = allCars.find(c => c.id.toString() === preselectedCar);
+        if (car && car.effective_available) {
+          selectedCars.push(preselectedCar);
+        }
       }
 
       renderForm(container);
     }
 
-    // ─── render ───────────────────────────────────────────────────────────────
-
+    // ── Render ─────────────────────────────────────────────────────────────
     function renderForm(container) {
-      const hasTemplate = !!selectedTemplate;
-      const today       = toYMD(new Date());
+      const today = new Date().toISOString().split('T')[0];
+      const minEnd = new Date(Date.now() + 86400000).toISOString().split('T')[0];
 
       container.innerHTML = `
-        <form id="requestForm" novalidate>
+        <form id="requestForm">
 
-          ${hasTemplate ? `
-            <div class="template-badge">
-              📦 ${selectedTemplate.name}
-              &nbsp;·&nbsp; ${selectedTemplate.duration_days} дни
-              &nbsp;·&nbsp; ${selectedTemplate.discount_percent}% отстъпка
-              &nbsp;<a href="create-request.html" style="font-size:0.8rem;opacity:0.7;">✕ промени</a>
+          <!-- Period -->
+          <div class="card" style="margin-bottom:22px;">
+            <h3 style="color:var(--cta);margin-bottom:18px;">📅 Период на наем</h3>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+              <div class="form-group">
+                <label for="start_date">Начална дата *</label>
+                <input type="date" id="start_date" name="start_date" required
+                       min="${today}" value="${preselectedStart || ''}"
+                       onchange="onDateChange()">
+              </div>
+              <div class="form-group">
+                <label for="end_date">Крайна дата *</label>
+                <input type="date" id="end_date" name="end_date" required
+                       min="${minEnd}" value="${preselectedEnd || ''}"
+                       onchange="onDateChange()">
+              </div>
             </div>
-          ` : ''}
-
-          <!-- ── Date section ── -->
-          <div class="card" style="margin-bottom:25px;">
-            <h3 style="color:var(--cta); margin-bottom:6px;">📅 Период на наем</h3>
-
-            ${hasTemplate ? renderSlotPicker() : renderFreeDatePicker(today)}
           </div>
 
-          <!-- ── Cars ── -->
-          <div class="card" style="margin-bottom:25px;">
-            <h3 style="color:var(--cta); margin-bottom:20px;">🚗 Изберете автомобили *</h3>
-            <p style="margin-bottom:15px; color:rgba(236,229,240,0.7);">
-              Изберете поне един автомобил (може повече):
+          <!-- Car selection -->
+          <div class="card" style="margin-bottom:22px;">
+            <h3 style="color:var(--cta);margin-bottom:6px;">🚗 Изберете автомобили *</h3>
+            <p style="font-size:0.85rem;color:rgba(236,229,240,0.5);margin-bottom:16px;">
+              Автомобилите в сиво са недостъпни за резервация в момента.
             </p>
-            <div id="car-selection" class="car-selection-grid">
-              ${renderCarSelection()}
-            </div>
-            <div class="field-error" id="car-error"></div>
-          </div>
-
-          <!-- ── Notes ── -->
-          <div class="card" style="margin-bottom:25px;">
-            <h3 style="color:var(--cta); margin-bottom:20px;">📝 Допълнителна информация</h3>
-            <div class="form-group">
-              <label for="notes">Бележки или специални искания</label>
-              <textarea id="notes" name="notes"
-                placeholder="Ако имате специални изисквания, моля опишете ги тук..."
-                maxlength="1000"></textarea>
-              <small id="notes-counter" style="color:rgba(236,229,240,0.5);">0 / 1000</small>
+            <div id="carSelectionGrid" class="car-selection-grid">
+              ${renderCarTiles()}
             </div>
           </div>
 
-          <!-- ── Price ── -->
-          <div id="price-calculation" style="display:none;">
-            <div class="total-price" id="total-price"></div>
+          <!-- Notes -->
+          <div class="card" style="margin-bottom:22px;">
+            <h3 style="color:var(--cta);margin-bottom:14px;">📝 Бележки</h3>
+            <div class="form-group" style="margin-bottom:0;">
+              <textarea id="notes" name="notes" placeholder="Специални изисквания, предпочитания…"></textarea>
+            </div>
           </div>
 
-          <div id="form-message"></div>
+          <!-- Price chip -->
+          <div class="price-chip" id="priceChip">
+            <div style="font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(236,229,240,0.4);margin-bottom:8px;">Обща цена</div>
+            <div class="price-chip-amount" id="chipAmount">€0.00</div>
+            <div class="price-chip-detail" id="chipDetail"></div>
+            <div id="chipDiscount"></div>
+          </div>
 
-          <button type="submit" id="submit-btn" class="btn btn-primary btn-lg"
-                  style="width:100%; margin-top:20px;">
+          <div id="formMessage" style="margin-top:16px;"></div>
+
+          <button type="submit" class="btn btn-primary btn-lg"
+                  style="width:100%;margin-top:20px;">
             Изпрати заявка
           </button>
-        </form>
-      `;
+        </form>`;
 
-      // listeners
-      if (!hasTemplate) {
-        document.getElementById('start_date').addEventListener('change', onFreeDateChange);
-        document.getElementById('end_date').addEventListener('change', onFreeDateChange);
-      }
-      document.getElementById('notes').addEventListener('input', e => {
-        document.getElementById('notes-counter').textContent = `${e.target.value.length} / 1000`;
-      });
       document.getElementById('requestForm').addEventListener('submit', submitRequest);
+
+      // Re-calculate if dates were pre-filled from URL
+      if (preselectedStart && preselectedEnd) updatePrice();
     }
 
-    // ─── slot picker (template active) ────────────────────────────────────────
+    // ── Car tiles ──────────────────────────────────────────────────────────
+    function renderCarTiles() {
+      if (!allCars.length) return '<p style="color:rgba(236,229,240,0.4);">Няма налични автомобили.</p>';
 
-    function renderSlotPicker() {
-      const slots = generateSlots(selectedTemplate);
-      const pack  = packType(selectedTemplate.name);
+      return allCars.map(car => {
+        // effective_available = available AND NOT in maintenance right now
+        const isBlocked = !car.effective_available;
+        const isSelected = selectedCars.includes(car.id.toString());
 
-      const ruleLabel = pack === 'weekend'
-        ? 'Началото е винаги петък, краят — неделя.'
-        : pack === 'business'
-        ? 'Началото е винаги понеделник.'
-        : 'Изберете начална дата — продължителността е фиксирана.';
+        // Build the "why blocked" label
+        let blockedLabel = '';
+        if (isBlocked) {
+          if (car.in_maintenance) {
+            const reason = car.unavailable_reason || 'В поддръжка';
+            const until = car.unavailable_until ? ` до ${fmtDate(car.unavailable_until)}` : '';
+            blockedLabel = `${reason}${until}`;
+          } else {
+            blockedLabel = 'Временно недостъпен';
+          }
+        }
 
-      const slotsHtml = slots.length === 0
-        ? `<div class="no-slots">Няма налични дати в следващите 90 дни.</div>`
-        : slots.map(s => `
-            <div class="date-slot ${selectedSlot?.start === s.start ? 'selected' : ''}"
-                 onclick="selectSlot('${s.start}','${s.end}')">
-              <div class="slot-start">${formatBG(s.start)}</div>
-              <div class="slot-arrow">↓</div>
-              <div class="slot-end">${formatBG(s.end)}</div>
-              <div class="slot-nights">${nightsLabel(selectedTemplate.duration_days)}</div>
-            </div>`
-          ).join('');
+        const tileClass = [
+          'car-tile',
+          isBlocked ? 'car-tile--blocked' : '',
+          isSelected ? 'car-tile--selected' : '',
+        ].filter(Boolean).join(' ');
 
-      const confirmedHtml = selectedSlot ? `
-        <div class="date-confirmed">
-          <div>
-            <div class="dc-label">Начало</div>
-            <div class="dc-value">${formatBG(selectedSlot.start)}</div>
-          </div>
-          <div style="font-size:1.4rem;opacity:0.4;">→</div>
-          <div>
-            <div class="dc-label">Край</div>
-            <div class="dc-value">${formatBG(selectedSlot.end)}</div>
-          </div>
-          <div style="margin-left:auto;">
-            <div class="dc-label">Продължителност</div>
-            <div class="dc-value">${nightsLabel(selectedTemplate.duration_days)}</div>
-          </div>
-        </div>` : '';
-
-      return `
-        <p style="color:rgba(236,229,240,0.6); font-size:0.88rem; margin-bottom:14px;">
-          ${ruleLabel}
-          Краят се изчислява автоматично.
-        </p>
-        <p style="font-weight:600; margin-bottom:8px;">Изберете начална дата:</p>
-        <div class="date-slots" id="slot-grid">${slotsHtml}</div>
-        <div class="field-error" id="slot-error"></div>
-        ${confirmedHtml}
-      `;
+        return `
+          <label class="${tileClass}" id="tile-${car.id}">
+            <input type="checkbox"
+                   value="${car.id}"
+                   ${isSelected ? 'checked' : ''}
+                   ${isBlocked ? 'disabled' : ''}
+                   onchange="toggleCar(this)">
+            <div class="car-tile-info">
+              <div class="car-tile-name">${car.brand} ${car.model} (${car.year})</div>
+              <div class="car-tile-price">€${parseFloat(car.price_per_day).toFixed(2)} / ден</div>
+              ${isBlocked ? `<div class="car-tile-blocked-label">🔒 ${blockedLabel}</div>` : ''}
+            </div>
+          </label>`;
+      }).join('');
     }
 
-    function selectSlot(start, end) {
-      selectedSlot = { start, end };
-      // Re-render only the slot section to reflect selection highlight
-      const card = document.querySelector('#requestForm .card');
-      card.querySelector('#slot-grid').querySelectorAll('.date-slot').forEach(el => {
-        el.classList.toggle('selected', el.getAttribute('onclick').includes(`'${start}'`));
-      });
-      // Update / insert confirmed bar
-      let bar = card.querySelector('.date-confirmed');
-      if (!bar) {
-        bar = document.createElement('div');
-        card.appendChild(bar);
-      }
-      bar.className = 'date-confirmed';
-      bar.innerHTML = `
-        <div>
-          <div class="dc-label">Начало</div>
-          <div class="dc-value">${formatBG(start)}</div>
-        </div>
-        <div style="font-size:1.4rem;opacity:0.4;">→</div>
-        <div>
-          <div class="dc-label">Край</div>
-          <div class="dc-value">${formatBG(end)}</div>
-        </div>
-        <div style="margin-left:auto;">
-          <div class="dc-label">Продължителност</div>
-          <div class="dc-value">${nightsLabel(selectedTemplate.duration_days)}</div>
-        </div>
-      `;
-      document.getElementById('slot-error').textContent = '';
-      updatePrice();
-    }
-
-    // ─── free date picker (no template) ───────────────────────────────────────
-
-    function renderFreeDatePicker(today) {
-      return `
-        <p style="color:rgba(236,229,240,0.6); font-size:0.88rem; margin-bottom:14px;">
-          Без избран пакет — изберете свободно начална и крайна дата.
-        </p>
-        <div class="free-dates">
-          <div class="form-group">
-            <label for="start_date">Начална дата *</label>
-            <input type="date" id="start_date" name="start_date" required min="${today}">
-          </div>
-          <div class="form-group">
-            <label for="end_date">Крайна дата *</label>
-            <input type="date" id="end_date" name="end_date" required min="${today}">
-          </div>
-        </div>
-      `;
-    }
-
-    function onFreeDateChange() {
-      clearAllFieldErrors();
-      const s = document.getElementById('start_date').value;
-      const e = document.getElementById('end_date').value;
-      if (s && e) {
-        const errs = validateFreeDates(s, e);
-        errs.forEach(err => showFieldError(err.field, err.message));
-      }
-      updatePrice();
-    }
-
-    function validateFreeDates(startStr, endStr) {
-      const errors = [];
-      const start  = parseLocal(startStr);
-      const end    = parseLocal(endStr);
-      const today  = new Date(); today.setHours(0,0,0,0);
-      if (start < today) errors.push({ field: 'start_date', message: 'Началната дата не може да бъде в миналото' });
-      if (end <= start)  errors.push({ field: 'end_date',   message: 'Крайната дата трябва да е след началната' });
-      return errors;
-    }
-
-    // ─── cars ─────────────────────────────────────────────────────────────────
-
-    function renderCarSelection() {
-      if (allCars.length === 0) return '<p>Няма налични автомобили</p>';
-      return allCars.map(car => `
-        <label class="car-checkbox ${selectedCars.includes(String(car.id)) ? 'selected' : ''}">
-          <input type="checkbox" value="${car.id}"
-            ${selectedCars.includes(String(car.id)) ? 'checked' : ''}
-            onchange="toggleCar(this)">
-          <div>
-            <strong>${car.brand} ${car.model}</strong><br>
-            <small>${LuxeAuto.ui.formatPrice(car.price_per_day)}/ден</small>
-          </div>
-        </label>`).join('');
-    }
-
+    // ── Toggle car selection ───────────────────────────────────────────────
     function toggleCar(checkbox) {
       const id = checkbox.value;
-      checkbox.closest('.car-checkbox').classList.toggle('selected', checkbox.checked);
-      if (checkbox.checked) { if (!selectedCars.includes(id)) selectedCars.push(id); }
-      else { selectedCars = selectedCars.filter(c => c !== id); }
-      document.getElementById('car-error').textContent = '';
+      const tile = document.getElementById(`tile-${id}`);
+
+      if (checkbox.checked) {
+        if (!selectedCars.includes(id)) selectedCars.push(id);
+        tile?.classList.add('car-tile--selected');
+      } else {
+        selectedCars = selectedCars.filter(c => c !== id);
+        tile?.classList.remove('car-tile--selected');
+      }
       updatePrice();
     }
 
-    // ─── price preview ────────────────────────────────────────────────────────
+    // ── Date change: re-evaluate blocked state against new dates ──────────
+    function onDateChange() {
+      const startVal = document.getElementById('start_date').value;
+      const endVal = document.getElementById('end_date').value;
 
-    function getActiveDates() {
-      if (selectedTemplate) {
-        return selectedSlot ? { start: selectedSlot.start, end: selectedSlot.end } : null;
+      if (startVal) {
+        const minEnd = new Date(startVal);
+        minEnd.setDate(minEnd.getDate() + 1);
+        document.getElementById('end_date').min = minEnd.toISOString().split('T')[0];
       }
-      const s = document.getElementById('start_date')?.value;
-      const e = document.getElementById('end_date')?.value;
-      return (s && e) ? { start: s, end: e } : null;
+
+      // Re-render tiles to reflect date-specific maintenance overlap
+      // (the effective_available on cars from the API is today-based;
+      //  here we additionally check if the SELECTED PERIOD hits the window)
+      const grid = document.getElementById('carSelectionGrid');
+      if (grid) grid.innerHTML = renderCarTilesForDates(startVal, endVal);
+
+      updatePrice();
     }
 
-    function updatePrice() {
-      const priceDiv = document.getElementById('price-calculation');
-      if (!priceDiv) return;
-      const dates = getActiveDates();
-      if (!dates || selectedCars.length === 0) { priceDiv.style.display = 'none'; return; }
+    function renderCarTilesForDates(startDate, endDate) {
+      return allCars.map(car => {
+        // Block if: car disabled OR maintenance overlaps the requested period
+        const maintOverlaps = startDate && endDate &&
+          car.unavailable_from && car.unavailable_until &&
+          car.unavailable_from < endDate &&
+          car.unavailable_until >= startDate;
 
-      const start = parseLocal(dates.start);
-      const end   = parseLocal(dates.end);
-      const days  = Math.round((end - start) / 86400000) + 1;
-      if (days <= 0) { priceDiv.style.display = 'none'; return; }
+        const isBlocked = !car.available || !!maintOverlaps;
 
-      let base = 0;
-      selectedCars.forEach(id => {
-        const car = allCars.find(c => String(c.id) === id);
-        if (car) base += parseFloat(car.price_per_day);
-      });
-      const discount = selectedTemplate ? (parseFloat(selectedTemplate.discount_percent) || 0) : 0;
-      const total    = base * days * (1 - discount / 100);
-
-      document.getElementById('total-price').innerHTML = `
-        ${discount > 0 ? `<div style="text-align:right;font-size:0.85rem;margin-bottom:4px;">
-          Пакет ${selectedTemplate.name} — ${discount}% отстъпка</div>` : ''}
-        ${LuxeAuto.ui.formatPrice(total)}
-        <span style="font-size:0.9rem;font-weight:normal;">(${days} дни × ${selectedCars.length} кола)</span>
-      `;
-      priceDiv.style.display = 'block';
-    }
-
-    // ─── field error helpers ──────────────────────────────────────────────────
-
-    function showFieldError(fieldName, message) {
-      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
-      if (!el) return;
-      el.classList.add('is-invalid');
-      let div = el.parentNode.querySelector('.field-error');
-      if (!div) { div = document.createElement('div'); div.className = 'field-error'; el.parentNode.appendChild(div); }
-      div.textContent = message;
-    }
-    function clearFieldError(fieldName) {
-      const el = document.querySelector(`[name="${fieldName}"], #${fieldName}`);
-      if (!el) return;
-      el.classList.remove('is-invalid');
-      const div = el.parentNode?.querySelector('.field-error');
-      if (div) div.textContent = '';
-    }
-    function clearAllFieldErrors() {
-      document.querySelectorAll('.field-error').forEach(e => e.textContent = '');
-      document.querySelectorAll('.is-invalid').forEach(e => e.classList.remove('is-invalid'));
-    }
-
-    // ─── submit ───────────────────────────────────────────────────────────────
-
-    async function submitRequest(e) {
-      e.preventDefault();
-      if (isSubmitting) return;
-
-      clearAllFieldErrors();
-      const msgDiv    = document.getElementById('form-message');
-      const submitBtn = document.getElementById('submit-btn');
-      msgDiv.innerHTML = '';
-
-      // Validate dates
-      let startStr, endStr;
-      if (selectedTemplate) {
-        if (!selectedSlot) {
-          document.getElementById('slot-error').textContent = 'Моля, изберете начална дата от списъка';
-          return;
+        // If currently selected but now blocked → deselect silently
+        if (isBlocked && selectedCars.includes(car.id.toString())) {
+          selectedCars = selectedCars.filter(c => c !== car.id.toString());
         }
-        startStr = selectedSlot.start;
-        endStr   = selectedSlot.end;
-      } else {
-        startStr = document.getElementById('start_date').value;
-        endStr   = document.getElementById('end_date').value;
-        const errs = validateFreeDates(startStr, endStr);
-        if (errs.length) { errs.forEach(err => showFieldError(err.field, err.message)); return; }
-      }
 
-      if (selectedCars.length === 0) {
-        document.getElementById('car-error').textContent = 'Моля изберете поне един автомобил';
+        const isSelected = selectedCars.includes(car.id.toString());
+
+        let blockedLabel = '';
+        if (isBlocked) {
+          if (car.unavailable_from && car.unavailable_until) {
+            const reason = car.unavailable_reason || 'В поддръжка';
+            const until = `до ${fmtDate(car.unavailable_until)}`;
+            blockedLabel = `${reason} ${until}`;
+          } else {
+            blockedLabel = 'Временно недостъпен';
+          }
+        }
+
+        const tileClass = ['car-tile', isBlocked ? 'car-tile--blocked' : '', isSelected ? 'car-tile--selected' : ''].filter(Boolean).join(' ');
+
+        return `
+          <label class="${tileClass}" id="tile-${car.id}">
+            <input type="checkbox"
+                   value="${car.id}"
+                   ${isSelected ? 'checked' : ''}
+                   ${isBlocked ? 'disabled' : ''}
+                   onchange="toggleCar(this)">
+            <div class="car-tile-info">
+              <div class="car-tile-name">${car.brand} ${car.model} (${car.year})</div>
+              <div class="car-tile-price">€${parseFloat(car.price_per_day).toFixed(2)} / ден</div>
+              ${isBlocked ? `<div class="car-tile-blocked-label">🔒 ${blockedLabel}</div>` : ''}
+            </div>
+          </label>`;
+      }).join('');
+    }
+
+    // ── Price calculation ──────────────────────────────────────────────────
+    function updatePrice() {
+      const chip = document.getElementById('priceChip');
+      const startDate = document.getElementById('start_date')?.value;
+      const endDate = document.getElementById('end_date')?.value;
+
+      if (!startDate || !endDate || !selectedCars.length) {
+        chip?.classList.remove('show');
         return;
       }
 
-      // Loading guard
-      isSubmitting = true;
-      submitBtn.classList.add('btn-loading');
-      submitBtn.textContent = 'Изпращане...';
-      msgDiv.innerHTML = '<div class="loading">Проверка на наличността и изчисляване на цена...</div>';
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (end <= start) { chip?.classList.remove('show'); return; }
+
+      const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+      let basePrice = 0;
+      selectedCars.forEach(id => {
+        const car = allCars.find(c => c.id.toString() === id);
+        if (car) basePrice += parseFloat(car.price_per_day);
+      });
+
+      const discount = selectedTemplate?.discount_percent || 0;
+      const totalPrice = basePrice * days * (1 - discount / 100);
+
+      document.getElementById('chipAmount').textContent = `€${totalPrice.toFixed(2)}`;
+      document.getElementById('chipDetail').textContent =
+        `${days} ${days === 1 ? 'ден' : 'дни'} × ${selectedCars.length} ${selectedCars.length === 1 ? 'автомобил' : 'автомобила'}`;
+
+      const discountEl = document.getElementById('chipDiscount');
+      discountEl.innerHTML = discount
+        ? `<span class="price-chip-discount">✓ ${discount}% отстъпка (${selectedTemplate?.name})</span>`
+        : '';
+
+      chip?.classList.add('show');
+    }
+
+    // ── Submit ─────────────────────────────────────────────────────────────
+    async function submitRequest(e) {
+      e.preventDefault();
+      const messageDiv = document.getElementById('formMessage');
+      const startDate = document.getElementById('start_date').value;
+      const endDate = document.getElementById('end_date').value;
+
+      if (!selectedCars.length) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Моля, изберете поне един автомобил.</div>';
+        return;
+      }
+      if (!startDate || !endDate) {
+        messageDiv.innerHTML = '<div class="alert alert-error">Моля, посочете началната и крайната дата.</div>';
+        return;
+      }
+
+      messageDiv.innerHTML = '<div class="loading">Изпращане на заявка...</div>';
 
       try {
         const data = await LuxeAuto.api.post('/requests', {
           template_id: selectedTemplate?.id || null,
-          car_ids:     selectedCars.map(Number),
-          start_date:  startStr,
-          end_date:    endStr,
-          notes:       document.getElementById('notes').value.trim()
+          car_ids: selectedCars.map(id => parseInt(id)),
+          start_date: startDate,
+          end_date: endDate,
+          notes: document.getElementById('notes').value,
         });
 
-        msgDiv.innerHTML = `
+        messageDiv.innerHTML = `
           <div class="alert alert-success">
             Заявката е изпратена успешно!<br>
-            Обща цена: ${LuxeAuto.ui.formatPrice(data.total_price)}<br>
-            <a href="my-requests.html">Вижте вашите заявки →</a>
+            Обща цена: <strong>€${data.total_price}</strong><br>
+            <a href="my-requests.html" style="color:var(--cta);">Вижте вашите заявки →</a>
           </div>`;
 
+        // Reset
+        selectedCars = [];
         document.getElementById('requestForm').reset();
-        selectedCars = []; selectedSlot = null;
-        document.getElementById('price-calculation').style.display = 'none';
-        renderForm(document.getElementById('requestFormContainer'));
+        document.getElementById('priceChip').classList.remove('show');
+        document.getElementById('carSelectionGrid').innerHTML = renderCarTiles();
 
       } catch (error) {
-        if (error.details && Array.isArray(error.details)) {
-          error.details.forEach(d => showFieldError(d.field, d.message));
-        }
-        msgDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
-      } finally {
-        isSubmitting = false;
-        submitBtn.classList.remove('btn-loading');
-        submitBtn.textContent = 'Изпрати заявка';
+        messageDiv.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
       }
     }
 
-    // ─── boot ─────────────────────────────────────────────────────────────────
-
+    // ── Boot ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
       initForm();
     });
   </script>
 </body>
+
 </html>

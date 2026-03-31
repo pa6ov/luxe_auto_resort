@@ -1,12 +1,525 @@
 <!DOCTYPE html>
 <html lang="bg">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Автомобили - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
+
+  <!-- Flatpickr date picker -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/bg.js"></script>
+
+  <style>
+    /* ─── Typography override for cars page ───────────────────── */
+    .cars-page {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .cars-page h1,
+    .cars-page h2,
+    .section-heading {
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    /* ─── Date search bar ──────────────────────────────────────── */
+    .date-search-bar {
+      background: linear-gradient(135deg,
+          rgba(75, 136, 162, 0.12) 0%,
+          rgba(23, 22, 20, 0.95) 60%,
+          rgba(233, 138, 21, 0.08) 100%);
+      border: 1px solid rgba(75, 136, 162, 0.3);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .date-search-bar::before {
+      content: '';
+      position: absolute;
+      top: -1px;
+      left: -1px;
+      right: -1px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent), var(--cta), var(--accent));
+      opacity: 0.6;
+    }
+
+    .date-search-label {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.04em;
+      color: var(--cta);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .date-search-label .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--cta);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.7);
+      }
+    }
+
+    .date-search-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto auto;
+      gap: 14px;
+      align-items: end;
+    }
+
+    .date-field label {
+      display: block;
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: rgba(236, 229, 240, 0.5);
+      margin-bottom: 6px;
+    }
+
+    .date-field .flatpickr-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(75, 136, 162, 0.35);
+      border-radius: 8px;
+      padding: 11px 14px;
+      color: var(--text-light);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+    }
+
+    .date-field .flatpickr-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(75, 136, 162, 0.18);
+    }
+
+    .date-field .flatpickr-input::placeholder {
+      color: rgba(236, 229, 240, 0.3);
+    }
+
+    .btn-search-dates {
+      background: linear-gradient(135deg, var(--accent), #3a7a9a);
+      color: var(--text-light);
+      border: none;
+      border-radius: 8px;
+      padding: 11px 22px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-search-dates:hover {
+      background: linear-gradient(135deg, #5fa4c7, var(--accent));
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px rgba(75, 136, 162, 0.35);
+    }
+
+    .btn-clear-dates {
+      background: transparent;
+      border: 1px solid rgba(236, 229, 240, 0.2);
+      color: rgba(236, 229, 240, 0.5);
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    .btn-clear-dates:hover {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn-clear-dates.hidden {
+      display: none;
+    }
+
+    /* ─── Availability status strip ────────────────────────────── */
+    .availability-strip {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 14px 20px;
+      border-radius: 8px;
+      margin-top: 14px;
+      font-size: 0.88rem;
+      animation: fadeSlideIn 0.35s ease;
+    }
+
+    .availability-strip.show {
+      display: flex;
+    }
+
+    .availability-strip.has-results {
+      background: rgba(40, 167, 69, 0.1);
+      border: 1px solid rgba(40, 167, 69, 0.25);
+      color: #6fcf97;
+    }
+
+    .availability-strip.no-results {
+      background: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.25);
+      color: #f08080;
+    }
+
+    .avail-counts {
+      display: flex;
+      gap: 20px;
+    }
+
+    .avail-count-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .avail-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .avail-dot.free {
+      background: #28a745;
+    }
+
+    .avail-dot.booked {
+      background: #dc3545;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-6px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ─── Alternative window banner ────────────────────────────── */
+    .alt-window-banner {
+      display: none;
+      background: linear-gradient(135deg, rgba(233, 138, 21, 0.12), rgba(75, 136, 162, 0.08));
+      border: 1px solid rgba(233, 138, 21, 0.35);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin-bottom: 24px;
+      animation: fadeSlideIn 0.4s ease;
+    }
+
+    .alt-window-banner.show {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .alt-window-icon {
+      font-size: 1.8rem;
+      flex-shrink: 0;
+    }
+
+    .alt-window-text h4 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem;
+      color: var(--cta);
+      margin-bottom: 4px;
+    }
+
+    .alt-window-text p {
+      font-size: 0.88rem;
+      color: rgba(236, 229, 240, 0.75);
+    }
+
+    .btn-try-alt {
+      margin-left: auto;
+      background: var(--cta);
+      color: var(--text-dark);
+      border: none;
+      border-radius: 7px;
+      padding: 9px 18px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .btn-try-alt:hover {
+      background: var(--cta-hover, #f5a03d);
+      transform: translateY(-1px);
+    }
+
+    /* ─── Car cards – availability badge ───────────────────────── */
+    .car-card {
+      position: relative;
+    }
+
+    .avail-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      padding: 4px 11px;
+      border-radius: 20px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .avail-badge.free {
+      background: rgba(40, 167, 69, 0.92);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(40, 167, 69, 0.4);
+    }
+
+    .avail-badge.booked {
+      background: rgba(220, 53, 69, 0.88);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(220, 53, 69, 0.35);
+    }
+
+    /* Dim booked cars slightly */
+    .car-card.car-booked {
+      opacity: 0.6;
+      filter: grayscale(0.3);
+    }
+
+    .car-card.car-booked:hover {
+      opacity: 0.75;
+      transform: none;
+    }
+
+    /* ─── Total price chip on card ──────────────────────────────── */
+    .total-price-chip {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 5px;
+      background: linear-gradient(135deg, rgba(233, 138, 21, 0.2), rgba(233, 138, 21, 0.08));
+      border: 1px solid rgba(233, 138, 21, 0.35);
+      border-radius: 8px;
+      padding: 7px 13px;
+      margin-bottom: 14px;
+    }
+
+    .total-price-chip .chip-amount {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: var(--cta);
+    }
+
+    .total-price-chip .chip-label {
+      font-size: 0.78rem;
+      color: rgba(236, 229, 240, 0.55);
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── Filter toolbar (existing style, slightly refined) ─────── */
+    .filter-toolbar {
+      background: rgba(37, 37, 37, 0.7);
+      border: 1px solid rgba(75, 136, 162, 0.15);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+
+    .filter-toolbar summary {
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: rgba(236, 229, 240, 0.5);
+      cursor: pointer;
+      user-select: none;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-toolbar summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .filter-toolbar summary::before {
+      content: '▸';
+      transition: transform 0.2s;
+      font-size: 0.7rem;
+    }
+
+    .filter-toolbar[open] summary::before {
+      transform: rotate(90deg);
+    }
+
+    .filter-toolbar-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+      align-items: end;
+    }
+
+    .filter-toolbar .form-group {
+      margin-bottom: 0;
+    }
+
+    /* ─── Results header ────────────────────────────────────────── */
+    .results-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 12px;
+    }
+
+    .results-count {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      color: var(--text-light);
+    }
+
+    .results-count span {
+      color: var(--cta);
+    }
+
+    .results-period {
+      font-size: 0.8rem;
+      color: rgba(236, 229, 240, 0.4);
+      letter-spacing: 0.05em;
+    }
+
+    /* ─── Skeleton loader ───────────────────────────────────────── */
+    .skeleton-card {
+      background: var(--card, #252525);
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid rgba(75, 136, 162, 0.1);
+    }
+
+    .skeleton-img {
+      width: 100%;
+      height: 200px;
+      background: linear-gradient(90deg, #252525 25%, #2d2d2d 50%, #252525 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    .skeleton-body {
+      padding: 18px;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      background: linear-gradient(90deg, #252525 25%, #2d2d2d 50%, #252525 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    .skeleton-line.w60 {
+      width: 60%;
+    }
+
+    .skeleton-line.w40 {
+      width: 40%;
+    }
+
+    @keyframes shimmer {
+      from {
+        background-position: 200% 0;
+      }
+
+      to {
+        background-position: -200% 0;
+      }
+    }
+
+    /* ─── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .date-search-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .btn-search-dates,
+      .btn-clear-dates {
+        grid-column: span 1;
+      }
+
+      .date-search-bar {
+        padding: 20px 16px;
+      }
+
+      .avail-counts {
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .alt-window-banner.show {
+        flex-wrap: wrap;
+      }
+
+      .btn-try-alt {
+        margin-left: 0;
+        width: 100%;
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .date-search-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
 </head>
-<body>
+
+<body class="cars-page">
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header>
     <div class="container">
       <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
@@ -23,6 +536,7 @@
     </div>
   </header>
 
+  <!-- ── Page header ────────────────────────────────────────────────────── -->
   <section class="page-header">
     <div class="container">
       <h1>Нашите <span>автомобили</span></h1>
@@ -30,11 +544,65 @@
     </div>
   </section>
 
+  <!-- ── Main content ───────────────────────────────────────────────────── -->
   <section id="cars">
     <div class="container">
-      <!-- Filters -->
-      <div class="filters">
-        <div class="filters-grid">
+
+      <!-- Date availability search -->
+      <div class="date-search-bar">
+        <div class="date-search-label">
+          <span class="dot"></span>
+          Проверете наличност по период
+        </div>
+        <div class="date-search-grid">
+          <div class="date-field">
+            <label for="searchStartDate">Начална дата</label>
+            <input id="searchStartDate" class="flatpickr-input" type="text" placeholder="дд.мм.гггг" readonly>
+          </div>
+          <div class="date-field">
+            <label for="searchEndDate">Крайна дата</label>
+            <input id="searchEndDate" class="flatpickr-input" type="text" placeholder="дд.мм.гггг" readonly>
+          </div>
+          <button class="btn-search-dates" onclick="applyDateSearch()">
+            🔍 Търси
+          </button>
+          <button class="btn-clear-dates hidden" id="clearDatesBtn" onclick="clearDateSearch()">
+            ✕ Изчисти дати
+          </button>
+        </div>
+
+        <!-- Inline availability summary -->
+        <div class="availability-strip" id="availabilityStrip">
+          <div class="avail-counts">
+            <span class="avail-count-item">
+              <span class="avail-dot free"></span>
+              <span id="availCount">0 свободни</span>
+            </span>
+            <span class="avail-count-item">
+              <span class="avail-dot booked"></span>
+              <span id="bookedCount">0 заети</span>
+            </span>
+            <span id="periodLabel" style="color:rgba(236,229,240,0.4); font-size:0.8rem;"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Alternative window banner (shown when 0 available) -->
+      <div class="alt-window-banner" id="altWindowBanner">
+        <span class="alt-window-icon">📅</span>
+        <div class="alt-window-text">
+          <h4>Няма свободни автомобили за избрания период</h4>
+          <p id="altWindowMsg">Разгледайте друга дата.</p>
+        </div>
+        <button class="btn-try-alt" id="altWindowBtn" onclick="applyAlternativeWindow()">
+          Виж наличните дати →
+        </button>
+      </div>
+
+      <!-- Filter toolbar (collapsible) -->
+      <details class="filter-toolbar" id="filterToolbar">
+        <summary>⚙ Допълнителни филтри</summary>
+        <div class="filter-toolbar-grid">
           <div class="form-group">
             <label for="filterBrand">Марка</label>
             <input type="text" id="filterBrand" placeholder="напр. Mercedes">
@@ -47,17 +615,16 @@
               <option value="suv">SUV</option>
               <option value="coupe">Купе</option>
               <option value="minivan">Миниван</option>
-              <option value="truck">Камион</option>
               <option value="sport">Спортен</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="filterMinPrice">Мин. цена (€/ден)</label>
-            <input type="number" id="filterMinPrice" placeholder="0" min="0">
+            <label for="filterMinPrice">Мин. цена / ден</label>
+            <input type="number" id="filterMinPrice" placeholder="0">
           </div>
           <div class="form-group">
-            <label for="filterMaxPrice">Макс. цена (€/ден)</label>
-            <input type="number" id="filterMaxPrice" placeholder="500" min="0">
+            <label for="filterMaxPrice">Макс. цена / ден</label>
+            <input type="number" id="filterMaxPrice" placeholder="500">
           </div>
           <div class="form-group">
             <label for="filterSort">Сортиране</label>
@@ -69,46 +636,55 @@
               <option value="brand">Марка (А-Я)</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="filterAvailable">Наличност</label>
-            <select id="filterAvailable">
-              <option value="true">Само налични</option>
-              <option value="">Всички</option>
-            </select>
+          <div class="form-group" style="display:flex;align-items:flex-end;">
+            <button class="btn btn-secondary" onclick="applyFilters()" style="width:100%">
+              Приложи
+            </button>
           </div>
         </div>
-        <div style="display:flex; gap:10px; margin-top:15px; flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="applyFilters()" style="flex:1; min-width:120px;">
-            🔍 Филтрирай
-          </button>
-          <button class="btn btn-outline" onclick="resetFilters()" style="flex:1; min-width:120px;">
-            ✕ Изчисти
-          </button>
+      </details>
+
+      <!-- Results header -->
+      <div class="results-header">
+        <div class="results-count" id="resultsCount">
+          &nbsp;
+        </div>
+        <span class="results-period" id="resultsPeriodLabel"></span>
+      </div>
+
+      <!-- Cars grid -->
+      <div id="carsGrid" class="car-grid">
+        <!-- Skeleton placeholders shown while loading -->
+        <div class="skeleton-card">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w40"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w40"></div>
+          </div>
+        </div>
+        <div class="skeleton-card">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w40"></div>
+          </div>
         </div>
       </div>
 
-      <!-- Results info bar -->
-      <div id="resultsInfo" style="
-        display:none;
-        margin-bottom:15px;
-        padding:10px 15px;
-        background:rgba(75,136,162,0.1);
-        border-radius:8px;
-        border-left:3px solid var(--accent);
-        font-size:0.95rem;
-        color:rgba(236,229,240,0.85);
-      "></div>
-
-      <!-- Active filters bar -->
-      <div id="activeFilters" style="display:none; margin-bottom:20px; display:flex; flex-wrap:wrap; gap:8px;"></div>
-
-      <!-- Cars Grid -->
-      <div id="carsGrid" class="car-grid">
-        <div class="loading">Зареждане на автомобили...</div>
-      </div>
     </div>
   </section>
 
+  <!-- ── Footer ─────────────────────────────────────────────────────────── -->
   <footer>
     <div class="container">
       <div class="footer-content">
@@ -142,217 +718,333 @@
 
   <script src="js/main.js"></script>
   <script>
-    // ─── Read filter values ONLY from the input elements ───────────────────────
-    function getFiltersFromInputs() {
-      return {
-        brand:     document.getElementById('filterBrand').value.trim(),
-        type:      document.getElementById('filterType').value,
-        min_price: document.getElementById('filterMinPrice').value.trim(),
-        max_price: document.getElementById('filterMaxPrice').value.trim(),
-        sort:      document.getElementById('filterSort').value,
-        available: document.getElementById('filterAvailable').value
-      };
-    }
+    // ── State ──────────────────────────────────────────────────────────────
+    let activeDateRange = { start: null, end: null };
+    let alternativeWindow = null;  // from API meta
 
-    // ─── Populate input elements from URL search params ────────────────────────
-    function populateFiltersFromURL() {
-      const params = new URLSearchParams(window.location.search);
-      if (params.has('brand'))     document.getElementById('filterBrand').value     = params.get('brand');
-      if (params.has('type'))      document.getElementById('filterType').value      = params.get('type');
-      if (params.has('min_price')) document.getElementById('filterMinPrice').value  = params.get('min_price');
-      if (params.has('max_price')) document.getElementById('filterMaxPrice').value  = params.get('max_price');
-      if (params.has('sort'))      document.getElementById('filterSort').value      = params.get('sort');
-      if (params.has('available')) document.getElementById('filterAvailable').value = params.get('available');
-    }
+    // ── Flatpickr setup ────────────────────────────────────────────────────
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-    // ─── Build a clean query string from an object, skipping empty values ──────
-    function buildQueryString(filters) {
-      const params = new URLSearchParams();
-      if (filters.brand)     params.set('brand',     filters.brand);
-      if (filters.type)      params.set('type',      filters.type);
-      if (filters.min_price) params.set('min_price', filters.min_price);
-      if (filters.max_price) params.set('max_price', filters.max_price);
-      if (filters.sort)      params.set('sort',      filters.sort);
-      if (filters.available) params.set('available', filters.available);
-      return params.toString();
-    }
-
-    // ─── Update the browser URL bar without reloading the page ────────────────
-    function updateURL(filters) {
-      const qs = buildQueryString(filters);
-      const newURL = window.location.pathname + (qs ? '?' + qs : '');
-      window.history.replaceState(null, '', newURL);
-    }
-
-    // ─── Show active filter tags below the filter bar ──────────────────────────
-    const TYPE_LABELS = {
-      sedan: 'Седан', suv: 'SUV', coupe: 'Купе',
-      minivan: 'Миниван', truck: 'Камион', sport: 'Спортен'
-    };
-    const SORT_LABELS = {
-      price_asc: 'Цена ↑', price_desc: 'Цена ↓',
-      year_desc: 'Година (нови)', brand: 'Марка А-Я'
-    };
-
-    function renderActiveFilters(filters) {
-      const bar = document.getElementById('activeFilters');
-      const tags = [];
-
-      if (filters.brand)
-        tags.push({ label: `Марка: ${filters.brand}`, key: 'brand' });
-      if (filters.type)
-        tags.push({ label: `Тип: ${TYPE_LABELS[filters.type] || filters.type}`, key: 'type' });
-      if (filters.min_price)
-        tags.push({ label: `Мин. цена: €${filters.min_price}`, key: 'min_price' });
-      if (filters.max_price)
-        tags.push({ label: `Макс. цена: €${filters.max_price}`, key: 'max_price' });
-      if (filters.sort)
-        tags.push({ label: `Сортиране: ${SORT_LABELS[filters.sort] || filters.sort}`, key: 'sort' });
-      if (filters.available === 'true')
-        tags.push({ label: 'Само налични', key: null }); // always-on, no remove
-
-      if (tags.length === 0) {
-        bar.style.display = 'none';
-        return;
-      }
-
-      bar.style.display = 'flex';
-      bar.innerHTML = tags.map(t => `
-        <span style="
-          display:inline-flex; align-items:center; gap:6px;
-          background:rgba(75,136,162,0.2); border:1px solid rgba(75,136,162,0.4);
-          padding:4px 12px; border-radius:20px; font-size:0.85rem;
-        ">
-          ${t.label}
-          ${t.key ? `<button onclick="removeFilter('${t.key}')" style="
-            background:none; border:none; color:var(--cta); cursor:pointer;
-            font-size:1rem; line-height:1; padding:0; margin-left:2px;
-          ">×</button>` : ''}
-        </span>
-      `).join('');
-    }
-
-    // ─── Remove a single filter tag ────────────────────────────────────────────
-    function removeFilter(key) {
-      const el = document.getElementById('filter' + key.charAt(0).toUpperCase() + key.slice(1).replace('_p', 'P').replace('_', ''));
-      // Map key to element id
-      const idMap = {
-        brand: 'filterBrand', type: 'filterType',
-        min_price: 'filterMinPrice', max_price: 'filterMaxPrice',
-        sort: 'filterSort'
-      };
-      const targetId = idMap[key];
-      if (targetId) {
-        const el = document.getElementById(targetId);
-        el.value = '';
-      }
-      applyFilters();
-    }
-
-    // ─── Reset all filters to default ─────────────────────────────────────────
-    function resetFilters() {
-      document.getElementById('filterBrand').value     = '';
-      document.getElementById('filterType').value      = '';
-      document.getElementById('filterMinPrice').value  = '';
-      document.getElementById('filterMaxPrice').value  = '';
-      document.getElementById('filterSort').value      = '';
-      document.getElementById('filterAvailable').value = 'true';
-      applyFilters();
-    }
-
-    // ─── Apply filters: read inputs → update URL → reload grid ────────────────
-    function applyFilters() {
-      const filters = getFiltersFromInputs();
-
-      // Validate price range
-      const min = parseFloat(filters.min_price);
-      const max = parseFloat(filters.max_price);
-      if (filters.min_price && filters.max_price && !isNaN(min) && !isNaN(max) && min > max) {
-        document.getElementById('filterMinPrice').style.borderColor = 'var(--danger)';
-        document.getElementById('filterMaxPrice').style.borderColor = 'var(--danger)';
-        document.getElementById('resultsInfo').style.display = 'block';
-        document.getElementById('resultsInfo').innerHTML =
-          '<span style="color:var(--danger);">⚠️ Минималната цена не може да е по-голяма от максималната.</span>';
-        return;
-      }
-      document.getElementById('filterMinPrice').style.borderColor = '';
-      document.getElementById('filterMaxPrice').style.borderColor = '';
-
-      updateURL(filters);
-      renderActiveFilters(filters);
-      loadCars(filters);
-    }
-
-    // ─── Load and render cars from API ────────────────────────────────────────
-    async function loadCars(filters) {
-      const container = document.getElementById('carsGrid');
-      const resultsInfo = document.getElementById('resultsInfo');
-
-      container.innerHTML = '<div class="loading">Зареждане на автомобили...</div>';
-      resultsInfo.style.display = 'none';
-
-      // If filters not passed (initial load), read from inputs
-      if (!filters) filters = getFiltersFromInputs();
-
-      const qs = buildQueryString(filters);
-      const endpoint = '/cars' + (qs ? '?' + qs : '');
-
-      try {
-        const cars = await LuxeAuto.api.get(endpoint);
-
-        // Show results count
-        resultsInfo.style.display = 'block';
-        if (cars.length === 0) {
-          resultsInfo.innerHTML = '🔍 Няма намерени автомобили по зададените критерии.';
-          container.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-              <h3>Няма намерени автомобили</h3>
-              <p>Опитайте с различни филтри или <a href="#" onclick="resetFilters(); return false;">изчистете всички филтри</a>.</p>
-            </div>
-          `;
-          return;
+    const fpStart = flatpickr('#searchStartDate', {
+      locale: 'bg',
+      dateFormat: 'd.m.Y',
+      minDate: 'today',
+      disableMobile: false,
+      onChange(selectedDates) {
+        if (selectedDates[0]) {
+          const nextDay = new Date(selectedDates[0]);
+          nextDay.setDate(nextDay.getDate() + 1);
+          fpEnd.set('minDate', nextDay);
+          // Auto-open end picker
+          if (!fpEnd.selectedDates.length) fpEnd.open();
         }
+      }
+    });
 
-        const availableCount = cars.filter(c => c.available).length;
-        resultsInfo.innerHTML = `
-          Намерени <strong>${cars.length}</strong> автомобила
-          ${filters.available === 'true' ? '' : ` &nbsp;·&nbsp; <span style="color:var(--success);">${availableCount} налични</span>`}
-        `;
+    const fpEnd = flatpickr('#searchEndDate', {
+      locale: 'bg',
+      dateFormat: 'd.m.Y',
+      minDate: new Date(today.getTime() + 86400000),
+      disableMobile: false,
+    });
 
-        container.innerHTML = cars.map(car => LuxeAuto.createCarCard(car)).join('');
+    // ── Populate filters from URL on load ──────────────────────────────────
+    function populateFilters() {
+      const p = new URLSearchParams(window.location.search);
+      if (p.has('brand')) document.getElementById('filterBrand').value = p.get('brand');
+      if (p.has('type')) document.getElementById('filterType').value = p.get('type');
+      if (p.has('min_price')) document.getElementById('filterMinPrice').value = p.get('min_price');
+      if (p.has('max_price')) document.getElementById('filterMaxPrice').value = p.get('max_price');
+      if (p.has('sort')) document.getElementById('filterSort').value = p.get('sort');
 
-      } catch (error) {
-        resultsInfo.style.display = 'none';
-        container.innerHTML = `
-          <div class="alert alert-error" style="grid-column:1/-1;">
-            ${error.message}
+      if (p.has('start_date') && p.has('end_date')) {
+        // Parse yyyy-mm-dd back to d.m.Y for flatpickr
+        const parseBg = (iso) => {
+          const [y, m, d] = iso.split('-');
+          return `${d}.${m}.${y}`;
+        };
+        fpStart.setDate(parseBg(p.get('start_date')), true);
+        fpEnd.setDate(parseBg(p.get('end_date')), true);
+        activeDateRange = { start: p.get('start_date'), end: p.get('end_date') };
+        document.getElementById('clearDatesBtn').classList.remove('hidden');
+      }
+    }
+
+    // ── Build API URL from current UI state ────────────────────────────────
+    function buildApiUrl() {
+      const brand = document.getElementById('filterBrand').value.trim();
+      const type = document.getElementById('filterType').value;
+      const minPrice = document.getElementById('filterMinPrice').value;
+      const maxPrice = document.getElementById('filterMaxPrice').value;
+      const sort = document.getElementById('filterSort').value;
+
+      let url = '/cars?';
+      if (brand) url += `brand=${encodeURIComponent(brand)}&`;
+      if (type) url += `type=${type}&`;
+      if (minPrice) url += `min_price=${minPrice}&`;
+      if (maxPrice) url += `max_price=${maxPrice}&`;
+      if (sort) url += `sort=${sort}&`;
+
+      if (activeDateRange.start && activeDateRange.end) {
+        url += `start_date=${activeDateRange.start}&end_date=${activeDateRange.end}`;
+      } else {
+        url += 'available=true';
+      }
+      return url;
+    }
+
+    // ── Trigger date search ────────────────────────────────────────────────
+    function applyDateSearch() {
+      const startDates = fpStart.selectedDates;
+      const endDates = fpEnd.selectedDates;
+
+      if (!startDates.length || !endDates.length) {
+        // Highlight inputs if empty
+        document.getElementById('searchStartDate').style.borderColor = 'var(--danger)';
+        document.getElementById('searchEndDate').style.borderColor = 'var(--danger)';
+        setTimeout(() => {
+          document.getElementById('searchStartDate').style.borderColor = '';
+          document.getElementById('searchEndDate').style.borderColor = '';
+        }, 1800);
+        return;
+      }
+
+      // Convert to ISO yyyy-mm-dd
+      const toISO = d => d.toISOString().split('T')[0];
+      activeDateRange = { start: toISO(startDates[0]), end: toISO(endDates[0]) };
+
+      document.getElementById('clearDatesBtn').classList.remove('hidden');
+      loadCars();
+    }
+
+    // ── Clear date filter ──────────────────────────────────────────────────
+    function clearDateSearch() {
+      fpStart.clear();
+      fpEnd.clear();
+      activeDateRange = { start: null, end: null };
+      alternativeWindow = null;
+
+      document.getElementById('clearDatesBtn').classList.add('hidden');
+      document.getElementById('availabilityStrip').classList.remove('show', 'has-results', 'no-results');
+      document.getElementById('altWindowBanner').classList.remove('show');
+      document.getElementById('resultsPeriodLabel').textContent = '';
+
+      loadCars();
+    }
+
+    // ── Apply alternative window from API ──────────────────────────────────
+    function applyAlternativeWindow() {
+      if (!alternativeWindow) return;
+
+      const toDisplay = (iso) => {
+        const [y, m, d] = iso.split('-');
+        return `${d}.${m}.${y}`;
+      };
+
+      fpStart.setDate(toDisplay(alternativeWindow.start), true);
+      fpEnd.setDate(toDisplay(alternativeWindow.end), true);
+      activeDateRange = { start: alternativeWindow.start, end: alternativeWindow.end };
+      loadCars();
+    }
+
+    // ── Apply extra filters ────────────────────────────────────────────────
+    function applyFilters() {
+      loadCars();
+    }
+
+    // ── Create car card HTML with availability enhancements ────────────────
+    function createEnhancedCarCard(car) {
+      const hasDateFilter = activeDateRange.start && activeDateRange.end;
+      const isAvail = car.is_available_for_period;
+
+      // Badge HTML
+      let badgeHtml = '';
+      if (hasDateFilter) {
+        badgeHtml = isAvail
+          ? '<span class="avail-badge free">✓ Свободен</span>'
+          : '<span class="avail-badge booked">✕ Зает</span>';
+      }
+
+      // Total price chip
+      let priceChipHtml = '';
+      if (hasDateFilter && isAvail && car.total_price) {
+        priceChipHtml = `
+          <div class="total-price-chip">
+            <span class="chip-amount">€${car.total_price.toFixed(2)}</span>
+            <span class="chip-label">/ ${car.rental_days} ${car.rental_days === 1 ? 'ден' : 'дни'}</span>
           </div>
         `;
       }
+
+      // Rent button – disabled for booked cars when dates are selected
+      const rentHref = hasDateFilter && isAvail
+        ? `create-request.html?car=${car.id}&start=${activeDateRange.start}&end=${activeDateRange.end}`
+        : `car-details.html?id=${car.id}`;
+      const rentLabel = hasDateFilter && isAvail ? 'Резервирай' : 'Виж детайли';
+
+      const cardClass = hasDateFilter && !isAvail ? 'car-card car-booked' : 'car-card';
+
+      return `
+        <div class="${cardClass}" data-id="${car.id}">
+          ${badgeHtml}
+          <img src="${car.image_url || 'https://via.placeholder.com/400x300?text=No+Image'}"
+               alt="${car.brand} ${car.model}" class="car-image"
+               loading="lazy">
+          <div class="car-details">
+            <h3 class="car-title">${car.brand} <span>${car.model}</span></h3>
+            <div class="car-info">
+              <span>${ui.getCarTypeBg(car.type)} ${car.type}</span>
+              <span>📅 ${car.year}</span>
+              <span>🪑 ${car.seats} места</span>
+              <span>⚙️ ${car.transmission}</span>
+              <span>⛽ ${car.fuel_type}</span>
+            </div>
+            ${priceChipHtml}
+            <p class="car-price">${ui.formatPrice(car.price_per_day)} <span>/ ден</span></p>
+            <a href="${rentHref}" class="btn btn-primary" style="width:100%">${rentLabel}</a>
+          </div>
+        </div>
+      `;
     }
 
-    // ─── Allow pressing Enter in text/number inputs to trigger filter ─────────
-    function setupEnterKey() {
-      ['filterBrand', 'filterMinPrice', 'filterMaxPrice'].forEach(id => {
-        document.getElementById(id).addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') applyFilters();
-        });
-      });
-      // Selects: apply immediately on change
-      ['filterType', 'filterSort', 'filterAvailable'].forEach(id => {
-        document.getElementById(id).addEventListener('change', applyFilters);
-      });
+    // ── Main load function ─────────────────────────────────────────────────
+    async function loadCars() {
+      const container = document.getElementById('carsGrid');
+      const strip = document.getElementById('availabilityStrip');
+      const altBanner = document.getElementById('altWindowBanner');
+      const countEl = document.getElementById('resultsCount');
+      const periodEl = document.getElementById('resultsPeriodLabel');
+
+      // Show skeleton while loading
+      container.innerHTML = [1, 2, 3].map(() => `
+        <div class="skeleton-card">
+          <div class="skeleton-img"></div>
+          <div class="skeleton-body">
+            <div class="skeleton-line"></div>
+            <div class="skeleton-line w60"></div>
+            <div class="skeleton-line w40"></div>
+          </div>
+        </div>
+      `).join('');
+
+      // Hide previous banners
+      strip.classList.remove('show', 'has-results', 'no-results');
+      altBanner.classList.remove('show');
+
+      try {
+        const url = buildApiUrl();
+        const resp = await LuxeAuto.api.get(url);
+
+        // resp is already unwrapped (main.js returns data.data when success+data)
+        // but meta is separate — we need the raw response for meta.
+        // Re-fetch raw for meta if date filter active
+        let cars = resp;
+        let meta = null;
+
+        if (activeDateRange.start && activeDateRange.end) {
+          // Re-request to get meta (api.get unwraps data, so we fetch raw here)
+          const raw = await fetch(
+            `${window.LuxeAuto._apiBase || (() => {
+              const h = window.location.hostname;
+              const p = (h === 'localhost' || h === '127.0.0.1') ? '3000' : (window.location.port || '3000');
+              return `http://${h}:${p}/api`;
+            })()}${url}`,
+            { headers: LuxeAuto.auth.token ? { Authorization: `Bearer ${LuxeAuto.auth.token}` } : {} }
+          );
+          const json = await raw.json();
+          if (json.success) {
+            cars = json.data;
+            meta = json.meta || null;
+          }
+        }
+
+        // ── Availability strip ───────────────────────────────────────────
+        if (activeDateRange.start && activeDateRange.end) {
+          const freeCount = cars.filter(c => c.is_available_for_period).length;
+          const bookedCount = cars.filter(c => !c.is_available_for_period).length;
+
+          document.getElementById('availCount').textContent = `${freeCount} свободни`;
+          document.getElementById('bookedCount').textContent = `${bookedCount} заети`;
+
+          const fmt = (iso) => {
+            const [y, m, d] = iso.split('-');
+            return `${d}.${m}.${y}`;
+          };
+          document.getElementById('periodLabel').textContent =
+            `${fmt(activeDateRange.start)} – ${fmt(activeDateRange.end)}`;
+
+          strip.classList.add('show');
+          strip.classList.add(freeCount > 0 ? 'has-results' : 'no-results');
+
+          // Period label in results header
+          periodEl.textContent = meta
+            ? `${meta.rental_days} ${meta.rental_days === 1 ? 'ден' : 'дни'} · ${fmt(activeDateRange.start)} → ${fmt(activeDateRange.end)}`
+            : '';
+
+          // ── Alternative window banner ──────────────────────────────────
+          if (meta && meta.alternative_window) {
+            alternativeWindow = meta.alternative_window;
+            document.getElementById('altWindowMsg').textContent =
+              `Намерихме свободни автомобили за ${fmt(meta.alternative_window.start)} – ${fmt(meta.alternative_window.end)}.`;
+            altBanner.classList.add('show');
+          } else {
+            alternativeWindow = null;
+          }
+        } else {
+          periodEl.textContent = '';
+        }
+
+        // ── Render cars ──────────────────────────────────────────────────
+        if (cars.length === 0) {
+          countEl.innerHTML = '<span>0</span> автомобила';
+          container.innerHTML = `
+            <div class="empty-state" style="grid-column:1/-1;">
+              <h3>Няма намерени автомобили</h3>
+              <p>Опитайте с различни филтри или период</p>
+            </div>`;
+          return;
+        }
+
+        // When date filter is active: show available first, then booked
+        if (activeDateRange.start) {
+          cars = [
+            ...cars.filter(c => c.is_available_for_period),
+            ...cars.filter(c => !c.is_available_for_period),
+          ];
+        }
+
+        const freeForDisplay = activeDateRange.start
+          ? cars.filter(c => c.is_available_for_period).length
+          : cars.length;
+
+        countEl.innerHTML = activeDateRange.start
+          ? `<span>${freeForDisplay}</span> свободни от ${cars.length}`
+          : `<span>${cars.length}</span> автомобила`;
+
+        container.innerHTML = cars.map(c => createEnhancedCarCard(c)).join('');
+
+      } catch (err) {
+        container.innerHTML = `
+          <div class="alert alert-error" style="grid-column:1/-1;">${err.message}</div>`;
+      }
     }
 
-    // ─── Init ──────────────────────────────────────────────────────────────────
+    // ── Init ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
-      populateFiltersFromURL();       // fill inputs from URL params
-      setupEnterKey();                // wire up keyboard & change events
-      const filters = getFiltersFromInputs();
-      renderActiveFilters(filters);   // show any pre-applied filter tags
-      loadCars(filters);              // fetch cars immediately
+      populateFilters();
+      loadCars();
+
+      // Allow pressing Enter in date fields to trigger search
+      document.getElementById('searchStartDate').addEventListener('keydown', e => {
+        if (e.key === 'Enter') applyDateSearch();
+      });
+      document.getElementById('searchEndDate').addEventListener('keydown', e => {
+        if (e.key === 'Enter') applyDateSearch();
+      });
     });
   </script>
 </body>
+
 </html>

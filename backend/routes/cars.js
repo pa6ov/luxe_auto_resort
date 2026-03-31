@@ -5,302 +5,473 @@ const { asyncHandler, ErrorCodes } = require('../utils/errors');
 
 const router = express.Router();
 
-// ── Validation ─────────────────────────────────────────────────────────────
+// ─── Input validation ─────────────────────────────────────────────────────────
 
 const validateCarInput = (data, isUpdate = false) => {
   const errors = [];
-
   if (!isUpdate) {
-    if (!data.brand)         errors.push({ field: 'brand',         message: 'Марката е задължителна' });
-    if (!data.model)         errors.push({ field: 'model',         message: 'Моделът е задължителен' });
-    if (!data.year)          errors.push({ field: 'year',          message: 'Годината е задължителна' });
+    if (!data.brand) errors.push({ field: 'brand', message: 'Марката е задължителна' });
+    if (!data.model) errors.push({ field: 'model', message: 'Моделът е задължителен' });
+    if (!data.year) errors.push({ field: 'year', message: 'Годината е задължителна' });
     if (!data.price_per_day) errors.push({ field: 'price_per_day', message: 'Цената на ден е задължителна' });
   }
-
   if (data.year) {
-    const year = parseInt(data.year);
-    if (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 2) {
+    const y = parseInt(data.year);
+    if (isNaN(y) || y < 1900 || y > new Date().getFullYear() + 2)
       errors.push({ field: 'year', message: 'Невалидна година' });
-    }
   }
   if (data.price_per_day) {
-    const price = parseFloat(data.price_per_day);
-    if (isNaN(price) || price <= 0) {
+    const p = parseFloat(data.price_per_day);
+    if (isNaN(p) || p <= 0)
       errors.push({ field: 'price_per_day', message: 'Цената трябва да е положително число' });
-    }
   }
   if (data.seats) {
-    const seats = parseInt(data.seats);
-    if (isNaN(seats) || seats < 1 || seats > 50) {
+    const s = parseInt(data.seats);
+    if (isNaN(s) || s < 1 || s > 50)
       errors.push({ field: 'seats', message: 'Броят на местата трябва да е между 1 и 50' });
-    }
   }
-  if (data.license_plate && !/^[А-ЯA-Z0-9\s\-]{4,15}$/i.test(data.license_plate)) {
+  if (data.license_plate && !/^[А-ЯA-Z0-9\s\-]{4,15}$/i.test(data.license_plate))
     errors.push({ field: 'license_plate', message: 'Невалиден формат на регистрационен номер' });
-  }
-
   return errors;
 };
 
-// ── Audit log helper (same signature as in requests.js) ─────────────────────
+// ─── Date helpers ─────────────────────────────────────────────────────────────
 
-async function writeAuditLog(adminId, action, tableName, recordId, previousValues, newValues) {
-  try {
-    await pool.query(
-      `INSERT INTO audit_log
-         (admin_id, action, table_name, record_id, previous_values, new_values)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [adminId, action, tableName, recordId,
-       JSON.stringify(previousValues), JSON.stringify(newValues)]
-    );
-  } catch (err) {
-    console.error('Audit log write failed:', err.message);
-  }
+/** Today as 'YYYY-MM-DD' */
+function todayStr() {
+  return new Date().toISOString().split('T')[0];
 }
 
-// ── Routes ─────────────────────────────────────────────────────────────────
+/**
+ * isInMaintenanceWindow(car, onDate)
+ * Returns true if the car's maintenance window covers the given date (inclusive).
+ * onDate defaults to today.
+ */
+function isInMaintenanceWindow(car, onDate) {
+  const d = onDate || todayStr();
+  return !!(
+    car.unavailable_from &&
+    car.unavailable_until &&
+    car.unavailable_from <= d &&
+    car.unavailable_until >= d
+  );
+}
 
-// GET /api/cars — public, with filters & sort
+/**
+ * maintenanceOverlaps(car, startDate, endDate)
+ * Returns true if the car's maintenance window overlaps with [startDate, endDate).
+ * Overlap: window.start < requested_end AND window.end >= requested_start
+ */
+function maintenanceOverlaps(car, startDate, endDate) {
+  if (!car.unavailable_from || !car.unavailable_until) return false;
+  return car.unavailable_from < endDate && car.unavailable_until >= startDate;
+}
+
+// ─── Core availability query ──────────────────────────────────────────────────
+
+/**
+ * getUnavailableCarIds(startDate, endDate)
+ *
+ * Returns Map<carId, { reason, until }> for every car blocked during
+ * the period [startDate, endDate), considering:
+ *   1. Active rental requests (pending | approved) that overlap the window
+ *   2. Admin-set maintenance windows on the cars table that overlap the window
+ *
+ * Maintenance takes precedence over booking labels.
+ */
+async function getUnavailableCarIds(startDate, endDate) {
+  const blocked = new Map();
+
+  // 1. Rental-request overlaps
+  const [bookingRows] = await pool.query(
+    `SELECT rc.car_id,
+            MAX(rr.end_date) AS until
+     FROM   request_cars rc
+     JOIN   rental_requests rr ON rr.id = rc.request_id
+     WHERE  rr.status IN ('pending', 'approved')
+       AND  rr.start_date < ?
+       AND  rr.end_date   > ?
+     GROUP  BY rc.car_id`,
+    [endDate, startDate]
+  );
+  for (const row of bookingRows) {
+    blocked.set(row.car_id, { reason: 'Заета', until: row.until });
+  }
+
+  // 2. Maintenance-window overlaps (takes precedence over booking label)
+  const [maintRows] = await pool.query(
+    `SELECT id                 AS car_id,
+            unavailable_until  AS until,
+            unavailable_reason AS reason
+     FROM   cars
+     WHERE  unavailable_from  IS NOT NULL
+       AND  unavailable_until IS NOT NULL
+       AND  unavailable_from  < ?
+       AND  unavailable_until >= ?`,
+    [endDate, startDate]
+  );
+  for (const row of maintRows) {
+    blocked.set(row.car_id, {
+      reason: row.reason || 'Техническа поддръжка',
+      until: row.until,
+    });
+  }
+
+  return blocked;
+}
+
+/**
+ * nextAvailableDate(carId)
+ *
+ * Returns the earliest ISO date string when the car will next be free,
+ * considering BOTH active bookings AND the maintenance window.
+ * Returns null if the car is free right now.
+ */
+async function nextAvailableDate(carId) {
+  const today = todayStr();
+  const candidates = [];
+
+  const [bookings] = await pool.query(
+    `SELECT MAX(rr.end_date) AS until
+     FROM   request_cars rc
+     JOIN   rental_requests rr ON rr.id = rc.request_id
+     WHERE  rc.car_id  = ?
+       AND  rr.status IN ('pending', 'approved')
+       AND  rr.end_date > ?`,
+    [carId, today]
+  );
+  if (bookings[0]?.until) candidates.push(bookings[0].until);
+
+  const [maint] = await pool.query(
+    `SELECT unavailable_until AS until
+     FROM   cars
+     WHERE  id                = ?
+       AND  unavailable_until IS NOT NULL
+       AND  unavailable_until >= ?`,
+    [carId, today]
+  );
+  if (maint[0]?.until) candidates.push(maint[0].until);
+
+  if (!candidates.length) return null;
+  return candidates.reduce((a, b) => (a > b ? a : b));
+}
+
+/**
+ * findNextAvailableWindow(requestedDays)
+ * Scans up to 90 days ahead for the first window where at least one car is free.
+ */
+async function findNextAvailableWindow(requestedDays) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (let offset = 1; offset <= 90; offset++) {
+    const tryStart = new Date(today);
+    tryStart.setDate(today.getDate() + offset);
+    const tryEnd = new Date(tryStart);
+    tryEnd.setDate(tryStart.getDate() + requestedDays);
+
+    const s = tryStart.toISOString().split('T')[0];
+    const e = tryEnd.toISOString().split('T')[0];
+    const bl = await getUnavailableCarIds(s, e);
+
+    const [allCars] = await pool.query('SELECT id FROM cars WHERE available = TRUE');
+    if (allCars.some(c => !bl.has(c.id))) return { start: s, end: e };
+  }
+  return null;
+}
+
+// ─── GET /api/cars ────────────────────────────────────────────────────────────
 router.get('/', asyncHandler(async (req, res) => {
-  const { brand, type, min_price, max_price, available, sort } = req.query;
+  const { brand, type, min_price, max_price, available, sort, start_date, end_date } = req.query;
 
+  let dateFilterActive = false;
+  let blocked = new Map();
+  let rentalDays = 0;
+  let alternativeWindow = null;
+
+  // ── Date-filter validation ─────────────────────────────────────────────────
+  if (start_date || end_date) {
+    if (!start_date || !end_date) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Трябва да посочите и двете дати',
+          code: ErrorCodes.VALIDATION_ERROR,
+          details: [
+            !start_date ? { field: 'start_date', message: 'Началната дата е задължителна' } : null,
+            !end_date ? { field: 'end_date', message: 'Крайната дата е задължителна' } : null,
+          ].filter(Boolean),
+        },
+      });
+    }
+
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    if (isNaN(start.getTime()))
+      return res.status(400).json({ success: false, error: { message: 'Невалидна начална дата', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'start_date', message: 'Невалидна начална дата' }] } });
+    if (isNaN(end.getTime()))
+      return res.status(400).json({ success: false, error: { message: 'Невалидна крайна дата', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'end_date', message: 'Невалидна крайна дата' }] } });
+    if (start < today)
+      return res.status(400).json({ success: false, error: { message: 'Началната дата не може да е в миналото', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'start_date', message: 'Началната дата не може да е в миналото' }] } });
+    if (end <= start)
+      return res.status(400).json({ success: false, error: { message: 'Крайната дата трябва да е след началната', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'end_date', message: 'Крайната дата трябва да е след началната' }] } });
+
+    rentalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    blocked = await getUnavailableCarIds(start_date, end_date);
+    dateFilterActive = true;
+  }
+
+  // ── Base SQL ───────────────────────────────────────────────────────────────
   let query = 'SELECT * FROM cars WHERE 1=1';
   const params = [];
 
-  if (brand) {
-    query += ' AND brand LIKE ?';
-    params.push(`%${brand}%`);
-  }
+  if (brand) { query += ' AND brand LIKE ?'; params.push(`%${brand}%`); }
   if (type) {
     const validTypes = ['sedan', 'suv', 'coupe', 'minivan', 'truck', 'sport'];
-    if (!validTypes.includes(type)) {
-      return res.status(400).json({
-        success: false,
-        error: { message: 'Невалиден тип автомобил', code: ErrorCodes.INVALID_VALUE }
-      });
-    }
-    query += ' AND type = ?';
-    params.push(type);
+    if (!validTypes.includes(type))
+      return res.status(400).json({ success: false, error: { message: 'Невалиден тип автомобил', code: ErrorCodes.INVALID_VALUE } });
+    query += ' AND type = ?'; params.push(type);
   }
-  if (min_price) {
-    const v = parseFloat(min_price);
-    if (isNaN(v) || v < 0) {
-      return res.status(400).json({
-        success: false,
-        error: { message: 'Невалидна минимална цена', code: ErrorCodes.INVALID_VALUE }
-      });
-    }
-    query += ' AND price_per_day >= ?';
-    params.push(v);
+  if (min_price) { query += ' AND price_per_day >= ?'; params.push(min_price); }
+  if (max_price) { query += ' AND price_per_day <= ?'; params.push(max_price); }
+
+  // NOTE: We never filter by available=TRUE in SQL alone when a date filter is
+  // present — we handle effective availability in JS below so we can show
+  // maintenance-blocked cars with their "until" info.
+  // When no date filter and available=true is requested, still apply SQL filter
+  // but we will additionally mask cars that are currently in maintenance.
+  if (!dateFilterActive && available === 'true') {
+    query += ' AND available = TRUE';
   }
-  if (max_price) {
-    const v = parseFloat(max_price);
-    if (isNaN(v) || v < 0) {
-      return res.status(400).json({
-        success: false,
-        error: { message: 'Невалидна максимална цена', code: ErrorCodes.INVALID_VALUE }
-      });
-    }
-    query += ' AND price_per_day <= ?';
-    params.push(v);
-  }
-  if (available === 'true') query += ' AND available = TRUE';
 
   switch (sort) {
-    case 'price_asc':  query += ' ORDER BY price_per_day ASC';  break;
+    case 'price_asc': query += ' ORDER BY price_per_day ASC'; break;
     case 'price_desc': query += ' ORDER BY price_per_day DESC'; break;
-    case 'year_desc':  query += ' ORDER BY year DESC';          break;
-    case 'brand':      query += ' ORDER BY brand, model';       break;
-    default:           query += ' ORDER BY id';
+    case 'year_desc': query += ' ORDER BY year DESC'; break;
+    case 'brand': query += ' ORDER BY brand, model'; break;
+    default: query += ' ORDER BY id';
   }
 
   const [cars] = await pool.query(query, params);
-  res.json({ success: true, data: cars, count: cars.length });
-}));
+  const today = todayStr();
 
-// GET /api/cars/:id — public
-router.get('/:id', asyncHandler(async (req, res) => {
-  const carId = parseInt(req.params.id);
-  if (isNaN(carId)) {
-    return res.status(400).json({
-      success: false,
-      error: { message: 'Невалидно ID на автомобил', code: ErrorCodes.INVALID_VALUE }
-    });
+  // ── Enrich every car ───────────────────────────────────────────────────────
+  const enriched = cars.map(car => {
+    // Is the maintenance window active RIGHT NOW (regardless of date filter)?
+    const inMaintToday = isInMaintenanceWindow(car, today);
+
+    // ── effective_available ────────────────────────────────────────────────
+    // This is the single authoritative field all frontend code should use.
+    // A car is effectively available only when:
+    //   1. available flag is TRUE (not permanently deactivated by admin)
+    //   2. NOT in a maintenance window today
+    // When a date filter is active, we additionally check booking overlap.
+    let effectivelyAvailable = car.available && !inMaintToday;
+
+    const maintInfo = {
+      in_maintenance: inMaintToday,
+      unavailable_from: car.unavailable_from || null,
+      unavailable_until: car.unavailable_until || null,
+      unavailable_reason: car.unavailable_reason || null,
+    };
+
+    if (dateFilterActive) {
+      const blockInfo = blocked.get(car.id);
+      // A car in maintenance today is also blocked for the date range
+      // (getUnavailableCarIds already catches it, but guard here too)
+      const isFreeForPeriod = car.available && !blockInfo && !maintenanceOverlaps(car, start_date, end_date);
+
+      return {
+        ...car,
+        ...maintInfo,
+        effective_available: isFreeForPeriod,
+        is_available_for_period: isFreeForPeriod,  // kept for backwards compat
+        rental_days: rentalDays,
+        total_price: isFreeForPeriod
+          ? parseFloat((car.price_per_day * rentalDays).toFixed(2))
+          : null,
+        block_reason: blockInfo?.reason || (inMaintToday ? (car.unavailable_reason || 'Техническа поддръжка') : null),
+        available_from_date: blockInfo?.until || car.unavailable_until || null,
+      };
+    }
+
+    return {
+      ...car,
+      ...maintInfo,
+      // KEY FIX: without date filter, expose effective availability
+      // so create-request.html and cars.html never show a maintenance car as free
+      effective_available: effectivelyAvailable,
+    };
+  });
+
+  // ── Alternative window suggestion ──────────────────────────────────────────
+  if (dateFilterActive && !enriched.some(c => c.effective_available)) {
+    alternativeWindow = await findNextAvailableWindow(rentalDays);
   }
 
-  const [cars] = await pool.query('SELECT * FROM cars WHERE id = ?', [carId]);
-  if (cars.length === 0) {
-    return res.status(404).json({
-      success: false,
-      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
-    });
-  }
-  res.json({ success: true, data: cars[0] });
-}));
-
-// POST /api/cars — admin creates car
-router.post('/', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
-  const validationErrors = validateCarInput(req.body, false);
-  if (validationErrors.length > 0) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: 'Моля, поправете грешките във формата',
-        code: ErrorCodes.VALIDATION_ERROR,
-        details: validationErrors
-      }
-    });
-  }
-
-  const {
-    brand, model, year, license_plate, price_per_day, type, seats,
-    transmission, fuel_type, mileage, image_url, description, available
-  } = req.body;
-
-  const [result] = await pool.query(
-    `INSERT INTO cars
-       (brand, model, year, license_plate, price_per_day, type, seats,
-        transmission, fuel_type, mileage, image_url, description, available)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [brand, model, year, license_plate || null, price_per_day,
-     type || 'sedan', seats || 5, transmission || 'automatic', fuel_type || 'petrol',
-     mileage || 0, image_url || null, description || null, available !== false]
-  );
-
-  await writeAuditLog(req.user.id, 'CREATE_CAR', 'cars', result.insertId, null, req.body);
-
-  res.status(201).json({
+  res.json({
     success: true,
-    message: 'Автомобилът е създаден успешно',
-    id: result.insertId
+    data: enriched,
+    count: enriched.length,
+    ...(dateFilterActive && {
+      meta: {
+        date_filter_active: true,
+        start_date, end_date,
+        rental_days: rentalDays,
+        unavailable_count: blocked.size,
+        alternative_window: alternativeWindow,
+      },
+    }),
   });
 }));
 
-// PUT /api/cars/:id — admin updates car
-// If `available` changes to FALSE, returns a `conflicts` warning when
-// active bookings exist for this car (Task 2 — conflict resolution).
-router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+// ─── GET /api/cars/:id ────────────────────────────────────────────────────────
+router.get('/:id', asyncHandler(async (req, res) => {
   const carId = parseInt(req.params.id);
-  if (isNaN(carId)) {
-    return res.status(400).json({
-      success: false,
-      error: { message: 'Невалидно ID на автомобил', code: ErrorCodes.INVALID_VALUE }
-    });
-  }
+  if (isNaN(carId))
+    return res.status(400).json({ success: false, error: { message: 'Невалидно ID', code: ErrorCodes.INVALID_VALUE } });
 
-  const validationErrors = validateCarInput(req.body, true);
-  if (validationErrors.length > 0) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: 'Моля, поправете грешките във формата',
-        code: ErrorCodes.VALIDATION_ERROR,
-        details: validationErrors
-      }
-    });
-  }
+  const [cars] = await pool.query('SELECT * FROM cars WHERE id = ?', [carId]);
+  if (!cars.length)
+    return res.status(404).json({ success: false, error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND } });
 
-  // Fetch current state for audit log and conflict detection
-  const [prev] = await pool.query('SELECT * FROM cars WHERE id = ?', [carId]);
-  if (prev.length === 0) {
-    return res.status(404).json({
-      success: false,
-      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
-    });
-  }
+  const car = cars[0];
+  const today = todayStr();
+  const inMaintNow = isInMaintenanceWindow(car, today);
+  const nextFree = await nextAvailableDate(carId);
 
-  const {
-    brand, model, year, license_plate, price_per_day, type, seats,
-    transmission, fuel_type, mileage, image_url, description, available
-  } = req.body;
-
-  // Detect maintenance conflict: car was available, now being set to unavailable
-  let conflictingBookings = [];
-  const goingUnavailable = prev[0].available && available === false;
-  if (goingUnavailable) {
-    const [conflicts] = await pool.query(
-      `SELECT rr.id AS request_id, rr.start_date, rr.end_date,
-              rr.status, u.first_name, u.last_name, u.email
-       FROM request_cars rc
-       JOIN rental_requests rr ON rc.request_id = rr.id
-       JOIN users u ON rr.user_id = u.id
-       WHERE rc.car_id = ? AND rr.status IN ('pending', 'approved')`,
-      [carId]
-    );
-    conflictingBookings = conflicts;
-  }
-
-  const [result] = await pool.query(
-    `UPDATE cars
-     SET brand=?, model=?, year=?, license_plate=?, price_per_day=?,
-         type=?, seats=?, transmission=?, fuel_type=?, mileage=?,
-         image_url=?, description=?, available=?
-     WHERE id=?`,
-    [brand, model, year, license_plate, price_per_day, type, seats,
-     transmission, fuel_type, mileage, image_url, description, available, carId]
-  );
-
-  if (result.affectedRows === 0) {
-    return res.status(404).json({
-      success: false,
-      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
-    });
-  }
-
-  // Audit log
-  const changedFields = {};
-  const prevFields = {};
-  const trackFields = ['brand','model','year','price_per_day','type','available'];
-  for (const f of trackFields) {
-    if (String(req.body[f]) !== String(prev[0][f])) {
-      prevFields[f]    = prev[0][f];
-      changedFields[f] = req.body[f];
-    }
-  }
-  if (Object.keys(changedFields).length > 0) {
-    await writeAuditLog(req.user.id, 'UPDATE_CAR', 'cars', carId, prevFields, changedFields);
-  }
-
-  const response = {
+  res.json({
     success: true,
-    message: 'Автомобилът е обновен успешно'
-  };
-
-  // Warn admin about conflicting bookings (Task 2 — conflict resolution)
-  if (conflictingBookings.length > 0) {
-    response.warning =
-      `Автомобилът е маркиран като неналичен, но има ${conflictingBookings.length} активна/и резервация/и за него.`;
-    response.conflicting_bookings = conflictingBookings;
-  }
-
-  res.json(response);
+    data: {
+      ...car,
+      in_maintenance: inMaintNow,
+      unavailable_reason: car.unavailable_reason || null,
+      next_available_date: nextFree || null,
+      // Single source of truth for all frontend rent-button logic
+      effective_available: car.available && !inMaintNow && !nextFree,
+    },
+  });
 }));
 
-// DELETE /api/cars/:id — admin deletes car (with audit log)
-router.delete('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+// ─── PATCH /api/cars/:id/availability  (admin) ────────────────────────────────
+router.patch('/:id/availability', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
   const carId = parseInt(req.params.id);
-  if (isNaN(carId)) {
-    return res.status(400).json({
-      success: false,
-      error: { message: 'Невалидно ID на автомобил', code: ErrorCodes.INVALID_VALUE }
-    });
+  if (isNaN(carId))
+    return res.status(400).json({ success: false, error: { message: 'Невалидно ID', code: ErrorCodes.INVALID_VALUE } });
+
+  const { unavailable_from, unavailable_until, unavailable_reason } = req.body;
+  const clearing = !unavailable_from && !unavailable_until;
+
+  if (!clearing) {
+    if (!unavailable_from || !unavailable_until) {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Трябва да посочите и двете дати',
+          code: ErrorCodes.VALIDATION_ERROR,
+          details: [
+            !unavailable_from ? { field: 'unavailable_from', message: 'Началната дата е задължителна' } : null,
+            !unavailable_until ? { field: 'unavailable_until', message: 'Крайната дата е задължителна' } : null,
+          ].filter(Boolean),
+        },
+      });
+    }
+    const from = new Date(unavailable_from);
+    const until = new Date(unavailable_until);
+    if (isNaN(from.getTime()))
+      return res.status(400).json({ success: false, error: { message: 'Невалидна начална дата', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'unavailable_from', message: 'Невалидна начална дата' }] } });
+    if (isNaN(until.getTime()))
+      return res.status(400).json({ success: false, error: { message: 'Невалидна крайна дата', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'unavailable_until', message: 'Невалидна крайна дата' }] } });
+    if (until <= from)
+      return res.status(400).json({ success: false, error: { message: 'Крайната дата трябва да е след началната', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'unavailable_until', message: 'Крайната дата трябва да е след началната' }] } });
+    if (unavailable_reason && unavailable_reason.length > 255)
+      return res.status(400).json({ success: false, error: { message: 'Причината не може да надвишава 255 символа', code: ErrorCodes.VALIDATION_ERROR } });
   }
 
-  const [prev] = await pool.query(
-    'SELECT brand, model, year FROM cars WHERE id = ?', [carId]
+  const [rows] = await pool.query('SELECT id FROM cars WHERE id = ?', [carId]);
+  if (!rows.length)
+    return res.status(404).json({ success: false, error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND } });
+
+  await pool.query(
+    `UPDATE cars
+     SET unavailable_from   = ?,
+         unavailable_until  = ?,
+         unavailable_reason = ?
+     WHERE id = ?`,
+    [
+      clearing ? null : unavailable_from,
+      clearing ? null : unavailable_until,
+      clearing ? null : (unavailable_reason || null),
+      carId,
+    ]
   );
 
-  const [result] = await pool.query('DELETE FROM cars WHERE id = ?', [carId]);
-  if (result.affectedRows === 0) {
-    return res.status(404).json({
-      success: false,
-      error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND }
-    });
-  }
+  res.json({
+    success: true,
+    message: clearing
+      ? 'Прозорецът за недостъпност е премахнат'
+      : 'Прозорецът за недостъпност е запазен успешно',
+  });
+}));
 
-  if (prev.length > 0) {
-    await writeAuditLog(req.user.id, 'DELETE_CAR', 'cars', carId, prev[0], null);
-  }
+// ─── POST /api/cars  (admin) ──────────────────────────────────────────────────
+router.post('/', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const { brand, model, year, license_plate, price_per_day, type, seats,
+    transmission, fuel_type, mileage, image_url, description, available } = req.body;
+
+  const errors = validateCarInput(req.body, false);
+  if (errors.length)
+    return res.status(400).json({ success: false, error: { message: 'Моля, поправете грешките', code: ErrorCodes.VALIDATION_ERROR, details: errors } });
+
+  const [result] = await pool.query(
+    `INSERT INTO cars (brand, model, year, license_plate, price_per_day, type, seats,
+                       transmission, fuel_type, mileage, image_url, description, available)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [brand, model, year, license_plate || null, price_per_day,
+      type || 'sedan', seats || 5, transmission || 'automatic', fuel_type || 'petrol',
+      mileage || 0, image_url || null, description || null, available !== false]
+  );
+  res.status(201).json({ success: true, message: 'Автомобилът е създаден успешно', id: result.insertId });
+}));
+
+// ─── PUT /api/cars/:id  (admin) ───────────────────────────────────────────────
+router.put('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const carId = parseInt(req.params.id);
+  if (isNaN(carId))
+    return res.status(400).json({ success: false, error: { message: 'Невалидно ID', code: ErrorCodes.INVALID_VALUE } });
+
+  const { brand, model, year, license_plate, price_per_day, type, seats,
+    transmission, fuel_type, mileage, image_url, description, available } = req.body;
+
+  const errors = validateCarInput(req.body, true);
+  if (errors.length)
+    return res.status(400).json({ success: false, error: { message: 'Моля, поправете грешките', code: ErrorCodes.VALIDATION_ERROR, details: errors } });
+
+  const [result] = await pool.query(
+    `UPDATE cars SET brand=?, model=?, year=?, license_plate=?, price_per_day=?,
+                     type=?, seats=?, transmission=?, fuel_type=?, mileage=?,
+                     image_url=?, description=?, available=? WHERE id=?`,
+    [brand, model, year, license_plate, price_per_day, type, seats,
+      transmission, fuel_type, mileage, image_url, description, available, carId]
+  );
+
+  if (!result.affectedRows)
+    return res.status(404).json({ success: false, error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND } });
+
+  res.json({ success: true, message: 'Автомобилът е обновен успешно' });
+}));
+
+// ─── DELETE /api/cars/:id  (admin) ────────────────────────────────────────────
+router.delete('/:id', requireAuth, requireAdmin, asyncHandler(async (req, res) => {
+  const carId = parseInt(req.params.id);
+  if (isNaN(carId))
+    return res.status(400).json({ success: false, error: { message: 'Невалидно ID', code: ErrorCodes.INVALID_VALUE } });
+
+  const [result] = await pool.query('DELETE FROM cars WHERE id = ?', [carId]);
+  if (!result.affectedRows)
+    return res.status(404).json({ success: false, error: { message: 'Автомобилът не е намерен', code: ErrorCodes.NOT_FOUND } });
 
   res.json({ success: true, message: 'Автомобилът е изтрит успешно' });
 }));

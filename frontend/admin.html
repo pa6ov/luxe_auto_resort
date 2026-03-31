@@ -1,73 +1,263 @@
 <!DOCTYPE html>
 <html lang="bg">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Админ панел - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/bg.js"></script>
   <style>
+    body {
+      font-family: 'DM Sans', sans-serif;
+    }
+
     .admin-sidebar {
       background: rgba(75, 136, 162, 0.1);
       padding: 20px;
       border-radius: 8px;
       margin-bottom: 20px;
     }
+
     .admin-sidebar ul {
       list-style: none;
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
     }
+
     .admin-sidebar a {
       padding: 10px 20px;
       background: rgba(233, 168, 21, 0.1);
       border-radius: 5px;
       color: var(--cta);
       font-weight: 500;
+      transition: all 0.2s;
     }
-    .admin-sidebar a:hover, .admin-sidebar a.active {
+
+    .admin-sidebar a:hover,
+    .admin-sidebar a.active {
       background: var(--cta);
       color: var(--text-dark);
     }
+
     .admin-section {
       display: none;
     }
+
     .admin-section.active {
       display: block;
     }
+
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 20px;
       margin-bottom: 30px;
     }
+
     .stat-card {
       background: linear-gradient(135deg, rgba(75, 136, 162, 0.2), rgba(233, 168, 21, 0.1));
       padding: 25px;
       border-radius: 8px;
       text-align: center;
     }
+
     .stat-card h3 {
       font-size: 2rem;
       color: var(--cta);
     }
+
     .modal-overlay {
       display: none;
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
+      inset: 0;
+      background: rgba(0, 0, 0, 0.82);
       z-index: 3000;
       align-items: center;
       justify-content: center;
+      overflow-y: auto;
+      padding: 20px;
     }
+
     .modal-overlay.active {
       display: flex;
     }
+
+    .modal-content {
+      background: var(--bg, #171614);
+      border: 1px solid rgba(75, 136, 162, 0.3);
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 720px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    /* ── Availability section ────────────────────────────────── */
+    .avail-section {
+      border-top: 1px solid rgba(75, 136, 162, 0.2);
+      margin-top: 24px;
+      padding-top: 24px;
+    }
+
+    .avail-section-title {
+      font-size: 0.75rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(236, 229, 240, 0.45);
+      margin-bottom: 16px;
+    }
+
+    .status-toggle {
+      display: inline-flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(75, 136, 162, 0.25);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
+      margin-bottom: 20px;
+    }
+
+    .status-pill {
+      padding: 8px 20px;
+      border-radius: 6px;
+      border: none;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: rgba(236, 229, 240, 0.5);
+      background: transparent;
+    }
+
+    .status-pill.active-pill {
+      color: var(--text-dark, #171614);
+    }
+
+    .status-pill.pill-available.active-pill {
+      background: #28a745;
+    }
+
+    .status-pill.pill-maintenance.active-pill {
+      background: #E98A15;
+    }
+
+    .maint-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .maint-fields .form-group {
+      margin-bottom: 0;
+    }
+
+    .maint-fields .flatpickr-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(75, 136, 162, 0.3);
+      border-radius: 8px;
+      padding: 11px 14px;
+      color: var(--text-light, #ECE5F0);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .maint-fields .flatpickr-input:focus {
+      outline: none;
+      border-color: var(--accent, #4B88A2);
+    }
+
+    .maint-reason {
+      grid-column: 1/-1;
+    }
+
+    /* Current window info box */
+    .current-window-box {
+      display: none;
+      background: rgba(233, 138, 21, 0.08);
+      border: 1px solid rgba(233, 138, 21, 0.3);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      font-size: 0.88rem;
+    }
+
+    .current-window-box.show {
+      display: block;
+    }
+
+    .current-window-box strong {
+      color: var(--cta, #E98A15);
+    }
+
+    .btn-clear-window {
+      background: transparent;
+      border: 1px solid rgba(220, 53, 69, 0.4);
+      color: #dc3545;
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      margin-top: 10px;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-clear-window:hover {
+      background: rgba(220, 53, 69, 0.12);
+    }
+
+    /* Maintenance badge in table */
+    .maint-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: rgba(233, 138, 21, 0.18);
+      border: 1px solid rgba(233, 138, 21, 0.35);
+      color: #E98A15;
+      border-radius: 6px;
+      padding: 3px 10px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .maint-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #E98A15;
+      animation: blink 1.5s ease-in-out infinite;
+    }
+
+    @keyframes blink {
+
+      0%,
+      100% {
+        opacity: 1
+      }
+
+      50% {
+        opacity: 0.3
+      }
+    }
+
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
+
 <body>
   <header>
     <div class="container">
@@ -95,7 +285,6 @@
 
   <section>
     <div class="container">
-      <!-- Admin Navigation -->
       <div class="admin-sidebar">
         <ul>
           <li><a href="#" class="active" onclick="showAdminSection('dashboard')">📊 Dashboard</a></li>
@@ -108,21 +297,19 @@
         </ul>
       </div>
 
-      <!-- Dashboard Section -->
       <div id="dashboard" class="admin-section active">
         <h2 style="margin-bottom:20px;">📊 Обща статистика</h2>
         <div id="dashboardStats" class="stats-grid">
           <div class="loading">Зареждане...</div>
         </div>
         <div class="card">
-          <h3 style="color:var(--cta); margin-bottom:15px;">🏆 Най-наемани автомобили</h3>
+          <h3 style="color:var(--cta);margin-bottom:15px;">🏆 Най-наемани автомобили</h3>
           <div id="topCars"></div>
         </div>
       </div>
 
-      <!-- Cars Section -->
       <div id="cars" class="admin-section">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <h2>🚗 Управление на автомобили</h2>
           <button class="btn btn-primary" onclick="showCarModal()">+ Добави автомобил</button>
         </div>
@@ -134,7 +321,8 @@
                 <th>Автомобил</th>
                 <th>Цена/ден</th>
                 <th>Тип</th>
-                <th>Наличен</th>
+                <th>Статус</th>
+                <th>Недостъпен до</th>
                 <th>Действия</th>
               </tr>
             </thead>
@@ -143,9 +331,8 @@
         </div>
       </div>
 
-      <!-- Templates Section -->
       <div id="templates" class="admin-section">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
           <h2>📦 Управление на шаблони</h2>
           <button class="btn btn-primary" onclick="showTemplateModal()">+ Добави шаблон</button>
         </div>
@@ -166,7 +353,6 @@
         </div>
       </div>
 
-      <!-- Requests Section -->
       <div id="requests" class="admin-section">
         <h2 style="margin-bottom:20px;">📋 Всички заявки</h2>
         <div style="margin-bottom:20px;">
@@ -196,7 +382,6 @@
         </div>
       </div>
 
-      <!-- Costs Section -->
       <div id="costs" class="admin-section">
         <h2 style="margin-bottom:20px;">💰 Разходи по клиенти</h2>
         <div class="table-container">
@@ -215,7 +400,6 @@
         </div>
       </div>
 
-      <!-- Comments Section -->
       <div id="comments" class="admin-section">
         <h2 style="margin-bottom:20px;">💬 Модерация на коментари</h2>
         <div class="table-container">
@@ -235,7 +419,6 @@
         </div>
       </div>
 
-      <!-- Messages Section -->
       <div id="messages" class="admin-section">
         <h2 style="margin-bottom:20px;">✉️ Контактни съобщения</h2>
         <div style="margin-bottom:20px;">
@@ -250,32 +433,21 @@
     </div>
   </section>
 
-  <!-- Car Modal -->
+  <!-- ══════════════════ CAR MODAL ══════════════════ -->
   <div id="carModal" class="modal-overlay">
-    <div class="modal-content" style="max-width:700px;">
+    <div class="modal-content">
       <div class="modal-header">
         <h3 id="carModalTitle">Добави автомобил</h3>
         <button class="modal-close" onclick="closeCarModal()">×</button>
       </div>
       <form id="carForm">
         <input type="hidden" id="carId">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-          <div class="form-group">
-            <label for="carBrand">Марка *</label>
-            <input type="text" id="carBrand" required>
-          </div>
-          <div class="form-group">
-            <label for="carModel">Модел *</label>
-            <input type="text" id="carModel" required>
-          </div>
-          <div class="form-group">
-            <label for="carYear">Година *</label>
-            <input type="number" id="carYear" required>
-          </div>
-          <div class="form-group">
-            <label for="carPrice">Цена/ден *</label>
-            <input type="number" step="0.01" id="carPrice" required>
-          </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+          <div class="form-group"><label for="carBrand">Марка *</label><input type="text" id="carBrand" required></div>
+          <div class="form-group"><label for="carModel">Модел *</label><input type="text" id="carModel" required></div>
+          <div class="form-group"><label for="carYear">Година *</label><input type="number" id="carYear" required></div>
+          <div class="form-group"><label for="carPrice">Цена/ден *</label><input type="number" step="0.01" id="carPrice"
+              required></div>
           <div class="form-group">
             <label for="carType">Тип</label>
             <select id="carType">
@@ -286,10 +458,7 @@
               <option value="sport">Спортен</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="carSeats">Места</label>
-            <input type="number" id="carSeats" value="5">
-          </div>
+          <div class="form-group"><label for="carSeats">Места</label><input type="number" id="carSeats" value="5"></div>
           <div class="form-group">
             <label for="carTransmission">Скоростна кутия</label>
             <select id="carTransmission">
@@ -308,19 +477,57 @@
           </div>
         </div>
         <div class="form-group">
-          <label for="carImage">Снимка URL</label>
-          <input type="url" id="carImage" placeholder="https://example.com/image.jpg">
+          <label for="carImage">Снимка (URL или локален път)</label>
+          <input type="text" id="carImage" placeholder="images/my-car.webp или https://example.com/car.jpg">
         </div>
-        <div class="form-group">
-          <label for="carDesc">Описание</label>
-          <textarea id="carDesc"></textarea>
+        <div class="form-group"><label for="carDesc">Описание</label><textarea id="carDesc"></textarea></div>
+
+        <!-- ── Availability section ──────────────────────────────── -->
+        <div class="avail-section">
+          <div class="avail-section-title">Статус на автомобила</div>
+
+          <div class="status-toggle">
+            <button type="button" class="status-pill pill-available active-pill" id="pillAvailable"
+              onclick="setCarStatus('available')">
+              ✅ Наличен
+            </button>
+            <button type="button" class="status-pill pill-maintenance" id="pillMaintenance"
+              onclick="setCarStatus('maintenance')">
+              🔧 Недостъпен / Поддръжка
+            </button>
+          </div>
+
+          <!-- Existing window info (shown when editing) -->
+          <div class="current-window-box" id="currentWindowBox">
+            <div id="currentWindowText"></div>
+            <button type="button" class="btn-clear-window" onclick="clearMaintenanceWindow()">
+              ✕ Премахни прозореца за недостъпност
+            </button>
+          </div>
+
+          <!-- Date + reason fields (hidden until maintenance mode) -->
+          <div id="maintFields" class="hidden">
+            <div class="maint-fields">
+              <div class="form-group">
+                <label for="maintFrom">Недостъпен от *</label>
+                <input type="text" id="maintFrom" placeholder="дд.мм.гггг" readonly>
+              </div>
+              <div class="form-group">
+                <label for="maintUntil">Недостъпен до *</label>
+                <input type="text" id="maintUntil" placeholder="дд.мм.гггг" readonly>
+              </div>
+              <div class="form-group maint-reason">
+                <label for="maintReason">Причина (видима за клиентите)</label>
+                <input type="text" id="maintReason"
+                  placeholder="напр. Техническа поддръжка, Ремонт на двигател, Сервиз…" maxlength="255">
+              </div>
+            </div>
+          </div>
+
+          <input type="hidden" id="carAvailableHidden" value="true">
         </div>
-        <div class="form-group">
-          <label>
-            <input type="checkbox" id="carAvailable" checked> Наличен
-          </label>
-        </div>
-        <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Запази</button>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:20px;">Запази</button>
       </form>
     </div>
   </div>
@@ -335,102 +542,149 @@
 
   <script src="js/main.js"></script>
   <script>
-    // Check admin access
-    if (!LuxeAuto.auth.isLoggedIn() || !LuxeAuto.auth.isAdmin()) {
-      window.location.href = 'login.html';
+    if (!LuxeAuto.auth.isLoggedIn() || !LuxeAuto.auth.isAdmin()) window.location.href = 'login.html';
+    document.getElementById('logoutBtn').addEventListener('click', e => { e.preventDefault(); LuxeAuto.auth.logout(); });
+
+    // ── Utils ──────────────────────────────────────────────────────────────
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      const [y, m, d] = iso.split('-');
+      return `${d}.${m}.${y}`;
+    }
+    function displayToISO(disp) {
+      if (!disp) return null;
+      const p = disp.split('.');
+      if (p.length !== 3) return null;
+      return `${p[2]}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
     }
 
-    // Logout
-    document.getElementById('logoutBtn').addEventListener('click', (e) => {
-      e.preventDefault();
-      LuxeAuto.auth.logout();
-    });
+    // ── Flatpickr instances ────────────────────────────────────────────────
+    let fpMaintFrom = null;
+    let fpMaintUntil = null;
 
-    // Navigation
+    function initMaintPickers() {
+      if (fpMaintFrom) { fpMaintFrom.destroy(); fpMaintFrom = null; }
+      if (fpMaintUntil) { fpMaintUntil.destroy(); fpMaintUntil = null; }
+
+      fpMaintFrom = flatpickr('#maintFrom', {
+        locale: 'bg', dateFormat: 'd.m.Y',
+        onChange(dates) {
+          if (dates[0] && fpMaintUntil) {
+            const next = new Date(dates[0]);
+            next.setDate(next.getDate() + 1);
+            fpMaintUntil.set('minDate', next);
+            if (!fpMaintUntil.selectedDates.length) fpMaintUntil.open();
+          }
+        }
+      });
+      fpMaintUntil = flatpickr('#maintUntil', {
+        locale: 'bg', dateFormat: 'd.m.Y',
+        minDate: new Date(Date.now() + 86400000),
+      });
+    }
+
+    // ── Status toggle ──────────────────────────────────────────────────────
+    let carStatusMode = 'available';
+
+    function setCarStatus(mode) {
+      carStatusMode = mode;
+      const pillA = document.getElementById('pillAvailable');
+      const pillM = document.getElementById('pillMaintenance');
+      const fields = document.getElementById('maintFields');
+
+      if (mode === 'available') {
+        pillA.classList.add('active-pill');
+        pillM.classList.remove('active-pill');
+        fields.classList.add('hidden');
+        document.getElementById('carAvailableHidden').value = 'true';
+      } else {
+        pillM.classList.add('active-pill');
+        pillA.classList.remove('active-pill');
+        fields.classList.remove('hidden');
+        document.getElementById('carAvailableHidden').value = 'true';
+        if (!fpMaintFrom) initMaintPickers();
+      }
+    }
+
+    // ── Clear window button ────────────────────────────────────────────────
+    async function clearMaintenanceWindow() {
+      const id = document.getElementById('carId').value;
+      if (!id) return;
+      try {
+        await LuxeAuto.api.patch(`/cars/${id}/availability`, {
+          unavailable_from: null, unavailable_until: null, unavailable_reason: null
+        });
+        document.getElementById('currentWindowBox').classList.remove('show');
+        setCarStatus('available');
+        if (fpMaintFrom) fpMaintFrom.clear();
+        if (fpMaintUntil) fpMaintUntil.clear();
+        document.getElementById('maintReason').value = '';
+      } catch (e) { alert(e.message); }
+    }
+
+    // ── Navigation ─────────────────────────────────────────────────────────
     function showAdminSection(id) {
       document.querySelectorAll('.admin-section').forEach(s => s.classList.remove('active'));
       document.querySelectorAll('.admin-sidebar a').forEach(a => a.classList.remove('active'));
       document.getElementById(id).classList.add('active');
       event.target.classList.add('active');
-      
-      // Load section data
-      switch(id) {
-        case 'dashboard': loadDashboard(); break;
-        case 'cars': loadCars(); break;
-        case 'templates': loadTemplates(); break;
-        case 'requests': loadRequests(); break;
-        case 'costs': loadCosts(); break;
-        case 'comments': loadComments(); break;
-        case 'messages': loadMessages(); break;
-      }
+      ({
+        dashboard: loadDashboard, cars: loadCars, templates: loadTemplates,
+        requests: loadRequests, costs: loadCosts, comments: loadComments,
+        messages: loadMessages
+      })[id]?.();
     }
 
-    // Dashboard
+    // ── Dashboard ──────────────────────────────────────────────────────────
     async function loadDashboard() {
       const container = document.getElementById('dashboardStats');
       try {
         const data = await LuxeAuto.api.get('/admin/dashboard');
         const s = data.total_stats;
-        
         container.innerHTML = `
-          <div class="stat-card">
-            <h3>${s.total_rentals || 0}</h3>
-            <p>Общо наеми</p>
-          </div>
-          <div class="stat-card">
-            <h3>${ui.formatPrice(s.total_revenue || 0)}</h3>
-            <p>Общ приход</p>
-          </div>
-          <div class="stat-card">
-            <h3>${s.total_clients || 0}</h3>
-            <p>Клиенти</p>
-          </div>
-          <div class="stat-card">
-            <h3>${s.total_cars || 0}</h3>
-            <p>Автомобили</p>
-          </div>
-        `;
-        
-        const topCarsHtml = data.top_cars.map((c, i) => `
-          <div style="display:flex; align-items:center; gap:15px; padding:10px; background:rgba(236,229,240,0.05); border-radius:5px; margin-bottom:10px;">
-            <span style="font-size:1.5rem; font-weight:bold; color:var(--cta); width:30px;">${i+1}</span>
-            <img src="${c.image_url || 'https://via.placeholder.com/60x40'}" style="width:60px; height:40px; object-fit:cover; border-radius:5px;">
-            <div>
-              <strong>${c.brand} ${c.model}</strong>
-              <br><small>${c.rental_count || 0} наема</small>
-            </div>
-          </div>
-        `).join('');
-        
-        document.getElementById('topCars').innerHTML = topCarsHtml || '<p>Няма данни</p>';
-      } catch (error) {
-        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
-      }
+          <div class="stat-card"><h3>${s.total_rentals || 0}</h3><p>Общо наеми</p></div>
+          <div class="stat-card"><h3>${ui.formatPrice(s.total_revenue || 0)}</h3><p>Общ приход</p></div>
+          <div class="stat-card"><h3>${s.total_clients || 0}</h3><p>Клиенти</p></div>
+          <div class="stat-card"><h3>${s.total_cars || 0}</h3><p>Автомобили</p></div>`;
+        document.getElementById('topCars').innerHTML = (data.top_cars || []).map((c, i) => `
+          <div style="display:flex;align-items:center;gap:15px;padding:10px;background:rgba(236,229,240,0.05);border-radius:5px;margin-bottom:10px;">
+            <span style="font-size:1.5rem;font-weight:bold;color:var(--cta);width:30px;">${i + 1}</span>
+            <img src="${c.image_url || 'https://via.placeholder.com/60x40'}" style="width:60px;height:40px;object-fit:cover;border-radius:5px;">
+            <div><strong>${c.brand} ${c.model}</strong><br><small>${c.rental_count || 0} наема</small></div>
+          </div>`).join('') || '<p>Няма данни</p>';
+      } catch (e) { container.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
     }
 
-    // Cars CRUD
+    // ── Cars ───────────────────────────────────────────────────────────────
     async function loadCars() {
       const tbody = document.getElementById('carsTable');
       try {
         const cars = await LuxeAuto.api.get('/cars');
-        tbody.innerHTML = cars.map(c => `
-          <tr>
-            <td>${c.id}</td>
-            <td>${c.brand} ${c.model}</td>
-            <td>${ui.formatPrice(c.price_per_day)}</td>
-            <td>${c.type}</td>
-            <td>${c.available ? '✅' : '❌'}</td>
+        const today = new Date().toISOString().split('T')[0];
+        tbody.innerHTML = cars.map(c => {
+          const inMaint = c.unavailable_from && c.unavailable_until && c.unavailable_from <= today && c.unavailable_until >= today;
+          const hasFuture = c.unavailable_from && c.unavailable_until && c.unavailable_from > today;
+          const statusCell = c.available ? '<span class="status status-approved">✅ Наличен</span>' : '<span class="status status-rejected">❌ Неактивен</span>';
+          let maintCell = '—';
+          if (inMaint) {
+            maintCell = `<span class="maint-badge"><span class="maint-badge-dot"></span>До ${fmtDate(c.unavailable_until)}</span>`
+              + (c.unavailable_reason ? `<br><small style="color:rgba(236,229,240,0.45);font-size:0.75rem;">${c.unavailable_reason}</small>` : '');
+          } else if (hasFuture) {
+            maintCell = `<span style="color:rgba(236,229,240,0.4);font-size:0.82rem;">от ${fmtDate(c.unavailable_from)}<br>до ${fmtDate(c.unavailable_until)}</span>`;
+          }
+          return `<tr>
+            <td>${c.id}</td><td>${c.brand} ${c.model}</td>
+            <td>${ui.formatPrice(c.price_per_day)}</td><td>${c.type}</td>
+            <td>${statusCell}</td><td>${maintCell}</td>
             <td>
               <button class="btn btn-sm btn-secondary" onclick="editCar(${c.id})">Редактирай</button>
-              <button class="btn btn-sm btn-danger" onclick="deleteCar(${c.id})">Изтрий</button>
-            </td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="alert alert-error">${error.message}</td></tr>`;
-      }
+              <button class="btn btn-sm btn-danger"    onclick="deleteCar(${c.id})">Изтрий</button>
+            </td></tr>`;
+        }).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="7" class="alert alert-error">${e.message}</td></tr>`; }
     }
 
+    // ── Show modal ─────────────────────────────────────────────────────────
     function showCarModal(car = null) {
       document.getElementById('carModalTitle').textContent = car ? 'Редактирай автомобил' : 'Добави автомобил';
       document.getElementById('carId').value = car?.id || '';
@@ -444,28 +698,47 @@
       document.getElementById('carFuel').value = car?.fuel_type || 'petrol';
       document.getElementById('carImage').value = car?.image_url || '';
       document.getElementById('carDesc').value = car?.description || '';
-      document.getElementById('carAvailable').checked = car?.available !== false;
+
+      // Reset pickers
+      if (fpMaintFrom) { fpMaintFrom.destroy(); fpMaintFrom = null; }
+      if (fpMaintUntil) { fpMaintUntil.destroy(); fpMaintUntil = null; }
+      document.getElementById('maintFrom').value = '';
+      document.getElementById('maintUntil').value = '';
+      document.getElementById('maintReason').value = '';
+
+      // Reset status UI to available
+      carStatusMode = 'available';
+      document.getElementById('pillAvailable').classList.add('active-pill');
+      document.getElementById('pillMaintenance').classList.remove('active-pill');
+      document.getElementById('maintFields').classList.add('hidden');
+      document.getElementById('carAvailableHidden').value = 'true';
+      document.getElementById('currentWindowBox').classList.remove('show');
+
+      // If car already has a window, show the info box
+      if (car?.unavailable_from && car?.unavailable_until) {
+        document.getElementById('currentWindowText').innerHTML =
+          `<strong>Текущ прозорец за недостъпност:</strong><br>
+           ${fmtDate(car.unavailable_from)} → ${fmtDate(car.unavailable_until)}` +
+          (car.unavailable_reason ? `<br><em style="color:rgba(236,229,240,0.6)">${car.unavailable_reason}</em>` : '');
+        document.getElementById('currentWindowBox').classList.add('show');
+      }
+
       document.getElementById('carModal').classList.add('active');
     }
 
-    function closeCarModal() {
-      document.getElementById('carModal').classList.remove('active');
-    }
+    function closeCarModal() { document.getElementById('carModal').classList.remove('active'); }
 
     async function editCar(id) {
-      try {
-        const cars = await LuxeAuto.api.get('/cars');
-        const car = cars.find(c => c.id === id);
-        if (car) showCarModal(car);
-      } catch (error) {
-        alert(error.message);
-      }
+      try { showCarModal(await LuxeAuto.api.get(`/cars/${id}`)); }
+      catch (e) { alert(e.message); }
     }
 
-    document.getElementById('carForm').addEventListener('submit', async (e) => {
+    // ── Form submit ────────────────────────────────────────────────────────
+    document.getElementById('carForm').addEventListener('submit', async e => {
       e.preventDefault();
       const id = document.getElementById('carId').value;
-      const data = {
+
+      const carData = {
         brand: document.getElementById('carBrand').value,
         model: document.getElementById('carModel').value,
         year: parseInt(document.getElementById('carYear').value),
@@ -476,182 +749,124 @@
         fuel_type: document.getElementById('carFuel').value,
         image_url: document.getElementById('carImage').value,
         description: document.getElementById('carDesc').value,
-        available: document.getElementById('carAvailable').checked
+        available: document.getElementById('carAvailableHidden').value === 'true',
       };
-      
+
       try {
+        let targetId = id;
+
         if (id) {
-          await LuxeAuto.api.put(`/cars/${id}`, data);
+          await LuxeAuto.api.put(`/cars/${id}`, carData);
         } else {
-          await LuxeAuto.api.post('/cars', data);
+          const created = await LuxeAuto.api.post('/cars', carData);
+          targetId = created?.id || null;
         }
+
+        // Save maintenance window if mode is active and we have an ID
+        if (carStatusMode === 'maintenance' && targetId) {
+          const fromDisp = document.getElementById('maintFrom').value;
+          const untilDisp = document.getElementById('maintUntil').value;
+          if (!fromDisp || !untilDisp) {
+            alert('Моля, посочете двете дати за недостъпност');
+            return;
+          }
+          await LuxeAuto.api.patch(`/cars/${targetId}/availability`, {
+            unavailable_from: displayToISO(fromDisp),
+            unavailable_until: displayToISO(untilDisp),
+            unavailable_reason: document.getElementById('maintReason').value.trim() || null,
+          });
+        }
+
         closeCarModal();
         loadCars();
-      } catch (error) {
-        alert(error.message);
-      }
+      } catch (e) { alert(e.message); }
     });
 
     async function deleteCar(id) {
       if (!confirm('Сигурни ли сте?')) return;
-      try {
-        await LuxeAuto.api.delete(`/cars/${id}`);
-        loadCars();
-      } catch (error) {
-        alert(error.message);
-      }
+      try { await LuxeAuto.api.delete(`/cars/${id}`); loadCars(); }
+      catch (e) { alert(e.message); }
     }
 
-    // Templates CRUD
+    // ── Templates ──────────────────────────────────────────────────────────
     async function loadTemplates() {
       const tbody = document.getElementById('templatesTable');
       try {
-        const templates = await LuxeAuto.api.get('/templates');
-        tbody.innerHTML = templates.map(t => `
-          <tr>
-            <td>${t.id}</td>
-            <td>${t.name}</td>
-            <td>${t.duration_days}</td>
-            <td>${t.discount_percent}%</td>
-            <td>${t.is_active ? '✅' : '❌'}</td>
-            <td>
-              <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.id})">Изтрий</button>
-            </td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="alert alert-error">${error.message}</td></tr>`;
-      }
+        const tpls = await LuxeAuto.api.get('/templates');
+        tbody.innerHTML = tpls.map(t => `<tr>
+          <td>${t.id}</td><td>${t.name}</td><td>${t.duration_days}</td>
+          <td>${t.discount_percent}%</td><td>${t.is_active ? '✅' : '❌'}</td>
+          <td><button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.id})">Изтрий</button></td>
+          </tr>`).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="alert alert-error">${e.message}</td></tr>`; }
     }
-
-    function showTemplateModal() {
-      alert('Функционалността за добавяне на шаблони ще бъде добавена скоро.');
-    }
-
+    function showTemplateModal() { alert('Функционалността ще бъде добавена скоро.'); }
     async function deleteTemplate(id) {
       if (!confirm('Сигурни ли сте?')) return;
-      try {
-        await LuxeAuto.api.delete(`/templates/${id}`);
-        loadTemplates();
-      } catch (error) {
-        alert(error.message);
-      }
+      try { await LuxeAuto.api.delete(`/templates/${id}`); loadTemplates(); } catch (e) { alert(e.message); }
     }
 
-    // Requests
+    // ── Requests ───────────────────────────────────────────────────────────
     async function loadRequests() {
       const tbody = document.getElementById('requestsTable');
       const status = document.getElementById('requestStatusFilter').value;
       try {
-        const requests = await LuxeAuto.api.get(`/requests${status ? `?status=${status}` : ''}`);
-        tbody.innerHTML = requests.map(r => `
-          <tr>
-            <td>${r.id}</td>
-            <td>${r.first_name} ${r.last_name}</td>
-            <td>${r.cars?.map(c => `${c.brand} ${c.model}`).join(', ') || '-'}</td>
-            <td>${ui.formatDate(r.start_date)} - ${ui.formatDate(r.end_date)}</td>
-            <td>${ui.formatPrice(r.total_price)}</td>
-            <td>${ui.getStatusBadge(r.status)}</td>
-            <td>
-              ${r.status === 'pending' ? `
-                <button class="btn btn-sm btn-success" onclick="updateRequestStatus(${r.id}, 'approved')">Одобри</button>
-                <button class="btn btn-sm btn-danger" onclick="updateRequestStatus(${r.id}, 'rejected')">Откажи</button>
-              ` : ''}
-              ${r.status === 'approved' ? `
-                <button class="btn btn-sm btn-secondary" onclick="updateRequestStatus(${r.id}, 'completed')">Приключи</button>
-              ` : ''}
-            </td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="7" class="alert alert-error">${error.message}</td></tr>`;
-      }
+        const reqs = await LuxeAuto.api.get(`/requests${status ? `?status=${status}` : ''}`);
+        tbody.innerHTML = reqs.map(r => `<tr>
+          <td>${r.id}</td><td>${r.first_name} ${r.last_name}</td>
+          <td>${r.cars?.map(c => `${c.brand} ${c.model}`).join(', ') || '-'}</td>
+          <td>${ui.formatDate(r.start_date)} - ${ui.formatDate(r.end_date)}</td>
+          <td>${ui.formatPrice(r.total_price)}</td><td>${ui.getStatusBadge(r.status)}</td>
+          <td>
+            ${r.status === 'pending' ? `<button class="btn btn-sm btn-success" onclick="updateRequestStatus(${r.id},'approved')">Одобри</button>
+              <button class="btn btn-sm btn-danger" onclick="updateRequestStatus(${r.id},'rejected')">Откажи</button>` : ''}
+            ${r.status === 'approved' ? `<button class="btn btn-sm btn-secondary" onclick="updateRequestStatus(${r.id},'completed')">Приключи</button>` : ''}
+          </td></tr>`).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="7" class="alert alert-error">${e.message}</td></tr>`; }
     }
-
     async function updateRequestStatus(id, status) {
-      try {
-        await LuxeAuto.api.patch(`/requests/${id}/status`, { status });
-        loadRequests();
-      } catch (error) {
-        alert(error.message);
-      }
+      try { await LuxeAuto.api.patch(`/requests/${id}/status`, { status }); loadRequests(); } catch (e) { alert(e.message); }
     }
 
-    // Costs
+    // ── Costs ──────────────────────────────────────────────────────────────
     async function loadCosts() {
       const tbody = document.getElementById('costsTable');
       try {
         const costs = await LuxeAuto.api.get('/costs/clients');
-        tbody.innerHTML = costs.map(c => `
-          <tr>
-            <td>${c.id}</td>
-            <td>${c.first_name} ${c.last_name}</td>
-            <td>${c.email}</td>
-            <td>${c.total_requests}</td>
-            <td>${ui.formatPrice(c.total_spent)}</td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="5" class="alert alert-error">${error.message}</td></tr>`;
-      }
+        tbody.innerHTML = costs.map(c => `<tr>
+          <td>${c.id}</td><td>${c.first_name} ${c.last_name}</td>
+          <td>${c.email}</td><td>${c.total_requests}</td>
+          <td>${ui.formatPrice(c.total_spent)}</td></tr>`).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="5" class="alert alert-error">${e.message}</td></tr>`; }
     }
 
-    // Comments
+    // ── Comments ───────────────────────────────────────────────────────────
     async function loadComments() {
       const tbody = document.getElementById('commentsTable');
       try {
         const comments = await LuxeAuto.api.get('/comments/pending');
-        if (comments.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="6">Няма чакащи коментари</td></tr>';
-          return;
-        }
-        tbody.innerHTML = comments.map(c => `
-          <tr>
-            <td>${c.id}</td>
-            <td>${c.first_name || c.guest_name || 'Анонимен'}</td>
-            <td>${c.type === 'template' ? 'Шаблон' : 'Платформа'}</td>
-            <td>${c.content.substring(0, 50)}...</td>
-            <td>${c.rating || '-'}</td>
-            <td>
-              <button class="btn btn-sm btn-success" onclick="approveComment(${c.id}, '${c.type}')">Одобри</button>
-              <button class="btn btn-sm btn-danger" onclick="rejectComment(${c.id}, '${c.type}')">Отхвърли</button>
-            </td>
-          </tr>
-        `).join('');
-      } catch (error) {
-        tbody.innerHTML = `<tr><td colspan="6" class="alert alert-error">${error.message}</td></tr>`;
-      }
+        if (!comments.length) { tbody.innerHTML = '<tr><td colspan="6">Няма чакащи коментари</td></tr>'; return; }
+        tbody.innerHTML = comments.map(c => `<tr>
+          <td>${c.id}</td><td>${c.first_name || c.guest_name || 'Анонимен'}</td>
+          <td>${c.type === 'template' ? 'Шаблон' : 'Платформа'}</td>
+          <td>${c.content.substring(0, 50)}...</td><td>${c.rating || '-'}</td>
+          <td>
+            <button class="btn btn-sm btn-success" onclick="approveComment(${c.id},'${c.type}')">Одобри</button>
+            <button class="btn btn-sm btn-danger"  onclick="rejectComment(${c.id},'${c.type}')">Отхвърли</button>
+          </td></tr>`).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="6" class="alert alert-error">${e.message}</td></tr>`; }
     }
+    async function approveComment(id, type) { try { await LuxeAuto.api.patch(`/comments/${id}/approve`, { type }); loadComments(); } catch (e) { alert(e.message); } }
+    async function rejectComment(id, type) { try { await LuxeAuto.api.delete(`/comments/${id}?type=${type}`); loadComments(); } catch (e) { alert(e.message); } }
 
-    async function approveComment(id, type) {
-      try {
-        await LuxeAuto.api.patch(`/comments/${id}/approve`, { type });
-        loadComments();
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-
-    async function rejectComment(id, type) {
-      try {
-        await LuxeAuto.api.delete(`/comments/${id}?type=${type}`);
-        loadComments();
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-
-    // Messages
+    // ── Messages ───────────────────────────────────────────────────────────
     async function loadMessages() {
       const container = document.getElementById('messagesList');
       const read = document.getElementById('messageReadFilter').value;
       try {
-        const messages = await LuxeAuto.api.get(`/contacts${read !== '' ? `?read=${read}` : ''}`);
-        if (messages.length === 0) {
-          container.innerHTML = '<p>Няма съобщения</p>';
-          return;
-        }
-        container.innerHTML = messages.map(m => `
+        const msgs = await LuxeAuto.api.get(`/contacts${read !== '' ? `?read=${read}` : ''}`);
+        if (!msgs.length) { container.innerHTML = '<p>Няма съобщения</p>'; return; }
+        container.innerHTML = msgs.map(m => `
           <div class="message ${m.is_read ? '' : 'unread'}">
             <div class="message-header">
               <span class="message-subject">${m.subject || 'Без тема'}</span>
@@ -662,230 +877,13 @@
             <button class="btn btn-sm btn-secondary" onclick="markMessageRead(${m.id})" ${m.is_read ? 'disabled' : ''}>
               ${m.is_read ? 'Прочетено' : 'Маркирай като прочетено'}
             </button>
-          </div>
-        `).join('');
-      } catch (error) {
-        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
-      }
+          </div>`).join('');
+      } catch (e) { container.innerHTML = `<div class="alert alert-error">${e.message}</div>`; }
     }
+    async function markMessageRead(id) { try { await LuxeAuto.api.patch(`/contacts/${id}/read`); loadMessages(); } catch (e) { alert(e.message); } }
 
-    async function markMessageRead(id) {
-      try {
-        await LuxeAuto.api.patch(`/contacts/${id}/read`);
-        loadMessages();
-      } catch (error) {
-        alert(error.message);
-      }
-    }
-
-    // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      loadDashboard();
-    });
-
-    (function patchCarFormSubmit() {
-  const originalForm = document.getElementById('carForm');
-  if (!originalForm) return;
-
-  // Remove old listener by cloning
-  const newForm = originalForm.cloneNode(true);
-  originalForm.parentNode.replaceChild(newForm, originalForm);
-
-  newForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id       = document.getElementById('carId').value;
-    const submitBtn = newForm.querySelector('button[type="submit"]');
-
-    // Loading guard (Task 3)
-    submitBtn.disabled    = true;
-    submitBtn.textContent = 'Запазване...';
-
-    const data = {
-      brand:        document.getElementById('carBrand').value,
-      model:        document.getElementById('carModel').value,
-      year:         parseInt(document.getElementById('carYear').value),
-      price_per_day:parseFloat(document.getElementById('carPrice').value),
-      type:         document.getElementById('carType').value,
-      seats:        parseInt(document.getElementById('carSeats').value),
-      transmission: document.getElementById('carTransmission').value,
-      fuel_type:    document.getElementById('carFuel').value,
-      image_url:    document.getElementById('carImage').value,
-      description:  document.getElementById('carDesc').value,
-      available:    document.getElementById('carAvailable').checked
-    };
-
-    try {
-      let result;
-      if (id) {
-        result = await LuxeAuto.api.put(`/cars/${id}`, data);
-      } else {
-        result = await LuxeAuto.api.post('/cars', data);
-      }
-
-      // Task 2 — conflict resolution: warn admin about active bookings
-      if (result && result.conflicting_bookings && result.conflicting_bookings.length > 0) {
-        const bookingList = result.conflicting_bookings
-          .map(b => `• Заявка #${b.request_id} (${b.first_name} ${b.last_name}) — ${formatDateShort(b.start_date)} до ${formatDateShort(b.end_date)}`)
-          .join('\n');
-
-        const proceed = confirm(
-          `⚠️ ${result.warning}\n\n${bookingList}\n\n` +
-          'Желаете ли да продължите? Клиентите трябва да бъдат уведомени ръчно.'
-        );
-        // Car is already saved; this is an informational dialog only.
-        if (proceed) {
-          showToast('Автомобилът е запазен. Моля, уведомете засегнатите клиенти.', 'warning');
-        }
-      }
-
-      closeCarModal();
-      loadCars();
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      submitBtn.disabled    = false;
-      submitBtn.textContent = 'Запази';
-    }
-  });
-})();
-
-// ── 2. Audit log section ────────────────────────────────────────────────────
-
-// Inject nav link
-(function addAuditNavLink() {
-  const sidebar = document.querySelector('.admin-sidebar ul');
-  if (!sidebar) return;
-  const li = document.createElement('li');
-  li.innerHTML = `<a href="#" onclick="showAdminSection('audit')">📋 Одит лог</a>`;
-  sidebar.appendChild(li);
-})();
-
-// Inject section HTML
-(function addAuditSection() {
-  const container = document.querySelector('section .container');
-  if (!container) return;
-
-  const div = document.createElement('div');
-  div.id        = 'audit';
-  div.className = 'admin-section';
-  div.innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <h2>📋 Одит лог</h2>
-      <select id="auditTableFilter" onchange="loadAuditLog()">
-        <option value="">Всички таблици</option>
-        <option value="rental_requests">Заявки</option>
-        <option value="cars">Автомобили</option>
-      </select>
-    </div>
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Администратор</th>
-            <th>Действие</th>
-            <th>Таблица</th>
-            <th>Запис #</th>
-            <th>Преди</th>
-            <th>След</th>
-            <th>Дата</th>
-          </tr>
-        </thead>
-        <tbody id="auditTable"></tbody>
-      </table>
-    </div>
-  `;
-  container.appendChild(div);
-})();
-
-async function loadAuditLog() {
-  const tbody = document.getElementById('auditTable');
-  const table = document.getElementById('auditTableFilter')?.value || '';
-  if (!tbody) return;
-
-  tbody.innerHTML = '<tr><td colspan="8" class="loading">Зареждане...</td></tr>';
-
-  try {
-    const url = '/admin/audit-log' + (table ? `?table=${encodeURIComponent(table)}` : '');
-    const logs = await LuxeAuto.api.get(url);
-
-    if (!logs || logs.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8">Няма записи в одит лога</td></tr>';
-      return;
-    }
-
-    tbody.innerHTML = logs.map(l => `
-      <tr>
-        <td>${l.id}</td>
-        <td>${l.admin_name || l.admin_id}</td>
-        <td><code>${l.action}</code></td>
-        <td>${l.table_name}</td>
-        <td>${l.record_id}</td>
-        <td><pre style="font-size:0.75rem; white-space:pre-wrap; margin:0;">${
-          l.previous_values ? JSON.stringify(JSON.parse(l.previous_values), null, 2) : '—'
-        }</pre></td>
-        <td><pre style="font-size:0.75rem; white-space:pre-wrap; margin:0;">${
-          l.new_values ? JSON.stringify(JSON.parse(l.new_values), null, 2) : '—'
-        }</pre></td>
-        <td>${formatDateShort(l.created_at)}</td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="8" class="alert alert-error">${err.message}</td></tr>`;
-  }
-}
-
-// Extend showAdminSection to handle the new 'audit' section
-const _originalShowAdminSection = window.showAdminSection;
-window.showAdminSection = function(id) {
-  _originalShowAdminSection(id);
-  if (id === 'audit') loadAuditLog();
-};
-
-// ── 3. Loading guards for status change buttons (Task 3) ───────────────────
-
-const _originalUpdateRequestStatus = window.updateRequestStatus;
-window.updateRequestStatus = async function(id, status) {
-  const btn = event?.target;
-  if (btn) {
-    btn.disabled    = true;
-    btn.textContent = '...';
-  }
-  try {
-    await _originalUpdateRequestStatus(id, status);
-  } finally {
-    if (btn) {
-      btn.disabled    = false;
-      btn.textContent = status === 'approved' ? 'Одобри'
-                      : status === 'rejected' ? 'Откажи'
-                      : 'Приключи';
-    }
-  }
-};
-
-// ── Utility helpers ─────────────────────────────────────────────────────────
-
-function formatDateShort(dateStr) {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('bg-BG', {
-    day: '2-digit', month: '2-digit', year: 'numeric'
-  });
-}
-
-function showToast(message, type = 'info') {
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-    padding: 14px 22px; border-radius: 8px; font-size: 0.95rem;
-    background: ${type === 'warning' ? 'rgba(255,193,7,0.95)' : 'rgba(75,136,162,0.95)'};
-    color: #171614; max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-  `;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 6000);
-}
-
+    document.addEventListener('DOMContentLoaded', () => { loadDashboard(); });
   </script>
 </body>
-</html>
 
+</html>

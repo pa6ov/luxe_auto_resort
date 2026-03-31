@@ -1,13 +1,359 @@
 <!DOCTYPE html>
 <html lang="bg">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Luxe Auto Resort - Луксозно наемане на автомобили</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap"
+    rel="stylesheet">
+
+  <!-- Flatpickr -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/bg.js"></script>
+
+  <style>
+    /* ─── Page-wide font upgrade ────────────────────────────────── */
+    body {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    h1,
+    h2,
+    h3,
+    .logo {
+      font-family: 'Cormorant Garamond', serif;
+    }
+
+    .logo {
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 500;
+    }
+
+    /* ─── Hero overhaul ─────────────────────────────────────────── */
+    .hero {
+      background:
+        linear-gradient(160deg,
+          rgba(23, 22, 20, 0.97) 0%,
+          rgba(23, 22, 20, 0.75) 45%,
+          rgba(75, 136, 162, 0.15) 100%),
+        url('https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=1600') center/cover no-repeat;
+      min-height: 72vh;
+      display: flex;
+      align-items: center;
+      padding: 0;
+    }
+
+    .hero-inner {
+      max-width: 780px;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--cta);
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: heroFadeUp 0.6s ease 0.1s forwards;
+    }
+
+    .hero-eyebrow::before {
+      content: '';
+      width: 28px;
+      height: 1px;
+      background: var(--cta);
+    }
+
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.4rem, 5.5vw, 4rem);
+      font-weight: 400;
+      line-height: 1.12;
+      color: var(--text-light);
+      margin-bottom: 20px;
+      opacity: 0;
+      animation: heroFadeUp 0.7s ease 0.25s forwards;
+    }
+
+    .hero h1 em {
+      font-style: italic;
+      color: var(--cta);
+    }
+
+    .hero-sub {
+      font-size: 1.05rem;
+      color: rgba(236, 229, 240, 0.65);
+      font-weight: 300;
+      line-height: 1.7;
+      margin-bottom: 36px;
+      max-width: 520px;
+      opacity: 0;
+      animation: heroFadeUp 0.7s ease 0.4s forwards;
+    }
+
+    @keyframes heroFadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ─── Hero search widget ─────────────────────────────────────── */
+    .hero-search {
+      background: rgba(23, 22, 20, 0.82);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(75, 136, 162, 0.25);
+      border-radius: 14px;
+      padding: 22px 24px;
+      max-width: 720px;
+      position: relative;
+      opacity: 0;
+      animation: heroFadeUp 0.8s ease 0.55s forwards;
+    }
+
+    .hero-search::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, rgba(75, 136, 162, 0.4), transparent 60%, rgba(233, 138, 21, 0.2));
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask-composite: exclude;
+      -webkit-mask-composite: xor;
+      pointer-events: none;
+    }
+
+    .search-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid rgba(75, 136, 162, 0.15);
+      padding-bottom: 14px;
+    }
+
+    .search-tab {
+      background: none;
+      border: none;
+      color: rgba(236, 229, 240, 0.4);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.82rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .search-tab.active {
+      background: rgba(75, 136, 162, 0.15);
+      color: var(--accent);
+    }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+
+    /* Shared field style used in hero */
+    .hero-field label {
+      display: block;
+      font-size: 0.7rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: rgba(236, 229, 240, 0.4);
+      margin-bottom: 5px;
+    }
+
+    .hero-field input,
+    .hero-field select {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(75, 136, 162, 0.28);
+      border-radius: 8px;
+      padding: 10px 13px;
+      color: var(--text-light);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .hero-field input:focus,
+    .hero-field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(75, 136, 162, 0.15);
+    }
+
+    .hero-field select option {
+      background: #1e1d1b;
+    }
+
+    .hero-field input::placeholder {
+      color: rgba(236, 229, 240, 0.25);
+    }
+
+    /* Flatpickr inside hero */
+    .hero-field .flatpickr-input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(75, 136, 162, 0.28);
+      border-radius: 8px;
+      padding: 10px 13px;
+      color: var(--text-light);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .hero-field .flatpickr-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(75, 136, 162, 0.15);
+    }
+
+    .hero-field .flatpickr-input::placeholder {
+      color: rgba(236, 229, 240, 0.25);
+    }
+
+    .btn-hero-search {
+      background: linear-gradient(135deg, var(--cta), #d07a10);
+      color: var(--text-dark);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+      height: 42px;
+    }
+
+    .btn-hero-search:hover {
+      background: linear-gradient(135deg, #f5a03d, var(--cta));
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(233, 138, 21, 0.35);
+    }
+
+    /* Tab panel toggling */
+    .search-panel {
+      display: none;
+    }
+
+    .search-panel.active {
+      display: block;
+    }
+
+    /* ─── Stats bar beneath hero ─────────────────────────────────── */
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+      margin-top: 28px;
+      opacity: 0;
+      animation: heroFadeUp 0.7s ease 0.7s forwards;
+    }
+
+    .hero-stat {
+      text-align: left;
+    }
+
+    .hero-stat-num {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem;
+      color: var(--cta);
+      line-height: 1;
+    }
+
+    .hero-stat-label {
+      font-size: 0.75rem;
+      color: rgba(236, 229, 240, 0.4);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    /* ─── Section styles ─────────────────────────────────────────── */
+    .section-heading {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .section-heading span {
+      color: var(--cta);
+    }
+
+    .section-sub {
+      text-align: center;
+      color: rgba(236, 229, 240, 0.5);
+      font-size: 0.9rem;
+      margin-bottom: 36px;
+    }
+
+    /* ─── Why us cards ───────────────────────────────────────────── */
+    #why-us .dashboard-card h3 {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .search-row {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .btn-hero-search {
+        grid-column: span 2;
+        height: auto;
+      }
+
+      .hero-stats {
+        gap: 18px;
+        flex-wrap: wrap;
+      }
+
+      .hero h1 {
+        font-size: 2rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .search-row {
+        grid-template-columns: 1fr;
+      }
+
+      .btn-hero-search {
+        grid-column: 1;
+      }
+
+      .hero-search {
+        padding: 18px 16px;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <!-- Header -->
+
+  <!-- ── Header ─────────────────────────────────────────────────────────── -->
   <header>
     <div class="container">
       <a href="index.html" class="logo">Luxe <span>Auto</span> Resort</a>
@@ -24,87 +370,143 @@
     </div>
   </header>
 
-  <!-- Hero Section -->
+  <!-- ── Hero ───────────────────────────────────────────────────────────── -->
   <section class="hero">
     <div class="container">
-      <h1>Луксозно <span>наемане</span> на автомобили</h1>
-      <p>Открийте най-големия избор от премиум автомобили на най-добри цени</p>
-      <a href="cars.html" class="btn btn-primary btn-lg">Разгледайте колите</a>
-    </div>
-  </section>
+      <div class="hero-inner">
+        <div class="hero-eyebrow">Луксозен автомобилен клас</div>
 
-  <!-- Search Section -->
-  <section id="search">
-    <div class="container">
-      <h2>Бързо <span>търсене</span></h2>
-      <div class="filters">
-        <div class="filters-grid">
-          <div class="form-group">
-            <label for="searchBrand">Марка</label>
-            <input type="text" id="searchBrand" placeholder="напр. Mercedes">
+        <h1>Шофирайте<br><em>по-умно</em>, живейте<br>по-добре</h1>
+
+        <p class="hero-sub">
+          Изберете от над 50 премиум автомобила.
+          Проверете наличност в реално време и резервирайте за минути.
+        </p>
+
+        <!-- Search widget -->
+        <div class="hero-search">
+          <div class="search-tabs">
+            <button class="search-tab active" onclick="switchTab('dates', this)">
+              📅 По период
+            </button>
+            <button class="search-tab" onclick="switchTab('quick', this)">
+              🔍 Бързо търсене
+            </button>
           </div>
-          <div class="form-group">
-            <label for="searchType">Тип</label>
-            <select id="searchType">
-              <option value="">Всички типове</option>
-              <option value="sedan">Седан</option>
-              <option value="suv">SUV</option>
-              <option value="coupe">Купе</option>
-              <option value="minivan">Миниван</option>
-              <option value="truck">Камион</option>
-              <option value="sport">Спортен</option>
-            </select>
+
+          <!-- Tab: By dates -->
+          <div class="search-panel active" id="panel-dates">
+            <div class="search-row">
+              <div class="hero-field">
+                <label for="heroStart">Начало</label>
+                <input id="heroStart" type="text" placeholder="дд.мм.гггг" readonly>
+              </div>
+              <div class="hero-field">
+                <label for="heroEnd">Край</label>
+                <input id="heroEnd" type="text" placeholder="дд.мм.гггг" readonly>
+              </div>
+              <div class="hero-field">
+                <label for="heroType">Тип кола</label>
+                <select id="heroType">
+                  <option value="">Всички</option>
+                  <option value="sedan">Седан</option>
+                  <option value="suv">SUV</option>
+                  <option value="coupe">Купе</option>
+                  <option value="minivan">Миниван</option>
+                  <option value="sport">Спортен</option>
+                </select>
+              </div>
+              <button class="btn-hero-search" onclick="searchByDates()">
+                Провери →
+              </button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="searchMinPrice">Мин. цена</label>
-            <input type="number" id="searchMinPrice" placeholder="0" min="0">
+
+          <!-- Tab: Quick search -->
+          <div class="search-panel" id="panel-quick">
+            <div class="search-row">
+              <div class="hero-field">
+                <label for="quickBrand">Марка</label>
+                <input type="text" id="quickBrand" placeholder="напр. BMW">
+              </div>
+              <div class="hero-field">
+                <label for="quickType">Тип</label>
+                <select id="quickType">
+                  <option value="">Всички</option>
+                  <option value="sedan">Седан</option>
+                  <option value="suv">SUV</option>
+                  <option value="coupe">Купе</option>
+                  <option value="minivan">Миниван</option>
+                  <option value="sport">Спортен</option>
+                </select>
+              </div>
+              <div class="hero-field">
+                <label for="quickMaxPrice">Макс. цена / ден</label>
+                <input type="number" id="quickMaxPrice" placeholder="€500">
+              </div>
+              <button class="btn-hero-search" onclick="quickSearch()">
+                Търси →
+              </button>
+            </div>
           </div>
-          <div class="form-group">
-            <label for="searchMaxPrice">Макс. цена</label>
-            <input type="number" id="searchMaxPrice" placeholder="500" min="0">
+        </div>
+
+        <!-- Stats -->
+        <div class="hero-stats">
+          <div class="hero-stat">
+            <div class="hero-stat-num">50+</div>
+            <div class="hero-stat-label">Автомобила</div>
           </div>
-          <div class="form-group">
-            <button class="btn btn-primary" onclick="searchCars()" style="width:100%">Търси</button>
+          <div class="hero-stat">
+            <div class="hero-stat-num">24/7</div>
+            <div class="hero-stat-label">Поддръжка</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num">€35</div>
+            <div class="hero-stat-label">От / ден</div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Featured Cars -->
+  <!-- ── Featured cars ──────────────────────────────────────────────────── -->
   <section id="featured">
     <div class="container">
-      <h2>Препоръчани <span>автомобили</span></h2>
+      <h2 class="section-heading">Препоръчани <span>автомобили</span></h2>
+      <p class="section-sub">Най-търсените модели тази седмица</p>
       <div id="featuredCars" class="car-grid">
         <div class="loading">Зареждане на автомобили...</div>
       </div>
-      <div style="text-align:center; margin-top:20px;">
+      <div style="text-align:center; margin-top:24px;">
         <a href="cars.html" class="btn btn-outline">Виж всички автомобили</a>
       </div>
     </div>
   </section>
 
-  <!-- Templates Section -->
-  <section id="templates" style="background-color: rgba(75, 136, 162, 0.05);">
+  <!-- ── Templates ──────────────────────────────────────────────────────── -->
+  <section id="templates" style="background-color:rgba(75,136,162,0.04);">
     <div class="container">
-      <h2>Нашите <span>пакети</span></h2>
+      <h2 class="section-heading">Нашите <span>пакети</span></h2>
+      <p class="section-sub">Готови планове с включена отстъпка</p>
       <div id="templateList" class="template-grid">
         <div class="loading">Зареждане на пакети...</div>
       </div>
-      <div style="text-align:center; margin-top:20px;">
+      <div style="text-align:center; margin-top:24px;">
         <a href="templates.html" class="btn btn-outline">Виж всички пакети</a>
       </div>
     </div>
   </section>
 
-  <!-- Why Choose Us -->
+  <!-- ── Why us ─────────────────────────────────────────────────────────── -->
   <section id="why-us">
     <div class="container">
-      <h2>Защо да изберете <span>нас</span></h2>
+      <h2 class="section-heading">Защо да изберете <span>нас</span></h2>
+      <p class="section-sub">Четири причини, които ни открояват</p>
       <div class="dashboard-grid">
         <div class="dashboard-card">
           <h3>🚗</h3>
-          <p>20+ Премиум автомобила</p>
+          <p>50+ Премиум автомобила</p>
         </div>
         <div class="dashboard-card">
           <h3>💰</h3>
@@ -122,13 +524,13 @@
     </div>
   </section>
 
-  <!-- Footer -->
+  <!-- ── Footer ─────────────────────────────────────────────────────────── -->
   <footer>
     <div class="container">
       <div class="footer-content">
         <div>
           <h3>Luxe Auto Resort</h3>
-          <p>Вашият доверен партньор за луксозно наемане на автомобили. Ние предлагаме най-доброто преживяване за нашите клиенти.</p>
+          <p>Вашият доверен партньор за луксозно наемане на автомобили. Ние предлагаме най-доброто преживяване.</p>
         </div>
         <div>
           <h3>Бързи връзки</h3>
@@ -156,75 +558,102 @@
 
   <script src="js/main.js"></script>
   <script>
-    // Load featured cars
+    // ── Flatpickr on hero ──────────────────────────────────────────────────
+    const fpHeroStart = flatpickr('#heroStart', {
+      locale: 'bg',
+      dateFormat: 'd.m.Y',
+      minDate: 'today',
+      onChange(dates) {
+        if (dates[0]) {
+          const next = new Date(dates[0]);
+          next.setDate(next.getDate() + 1);
+          fpHeroEnd.set('minDate', next);
+          if (!fpHeroEnd.selectedDates.length) fpHeroEnd.open();
+        }
+      }
+    });
+
+    const fpHeroEnd = flatpickr('#heroEnd', {
+      locale: 'bg',
+      dateFormat: 'd.m.Y',
+      minDate: new Date(Date.now() + 86400000),
+    });
+
+    // ── Tab switcher ───────────────────────────────────────────────────────
+    function switchTab(name, btn) {
+      document.querySelectorAll('.search-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.search-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`panel-${name}`).classList.add('active');
+    }
+
+    // ── Date-based search → goes to cars.html with dates ──────────────────
+    function searchByDates() {
+      const startDates = fpHeroStart.selectedDates;
+      const endDates = fpHeroEnd.selectedDates;
+      const type = document.getElementById('heroType').value;
+
+      const toISO = d => d.toISOString().split('T')[0];
+
+      let url = 'cars.html?';
+      if (startDates.length) url += `start_date=${toISO(startDates[0])}&`;
+      if (endDates.length) url += `end_date=${toISO(endDates[0])}&`;
+      if (type) url += `type=${type}&`;
+      // Strip trailing &
+      window.location.href = url.replace(/&$/, '');
+    }
+
+    // ── Quick search ───────────────────────────────────────────────────────
+    function quickSearch() {
+      const brand = document.getElementById('quickBrand').value.trim();
+      const type = document.getElementById('quickType').value;
+      const maxPrice = document.getElementById('quickMaxPrice').value;
+
+      let url = 'cars.html?available=true&';
+      if (brand) url += `brand=${encodeURIComponent(brand)}&`;
+      if (type) url += `type=${type}&`;
+      if (maxPrice) url += `max_price=${maxPrice}&`;
+      window.location.href = url.replace(/&$/, '');
+    }
+
+    // ── Featured cars ──────────────────────────────────────────────────────
     async function loadFeaturedCars() {
       const container = document.getElementById('featuredCars');
-      
       try {
         const cars = await LuxeAuto.api.get('/cars?available=true&sort=price_desc');
         const featured = cars.slice(0, 6);
-        
-        if (featured.length === 0) {
+        if (!featured.length) {
           container.innerHTML = '<div class="empty-state"><h3>Няма налични автомобили</h3></div>';
           return;
         }
-        
-        container.innerHTML = featured.map(car => LuxeAuto.createCarCard(car)).join('');
-      } catch (error) {
-        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+        container.innerHTML = featured.map(c => LuxeAuto.createCarCard(c)).join('');
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
       }
     }
 
-    // Load templates
+    // ── Templates ──────────────────────────────────────────────────────────
     async function loadTemplates() {
       const container = document.getElementById('templateList');
-      
       try {
         const templates = await LuxeAuto.api.get('/templates');
-        
-        if (templates.length === 0) {
+        if (!templates.length) {
           container.innerHTML = '<div class="empty-state"><h3>Няма налични пакети</h3></div>';
           return;
         }
-        
         container.innerHTML = templates.map(t => LuxeAuto.createTemplateCard(t)).join('');
-      } catch (error) {
-        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
       }
     }
 
-    // ─── FIXED: build query params correctly, never concatenate the API path ───
-    function searchCars() {
-      const brand    = document.getElementById('searchBrand').value.trim();
-      const type     = document.getElementById('searchType').value;
-      const minPrice = document.getElementById('searchMinPrice').value.trim();
-      const maxPrice = document.getElementById('searchMaxPrice').value.trim();
-
-      // Use URLSearchParams so the result is always "cars.html?key=value"
-      // and never "cars.html/cars?key=value"
-      const params = new URLSearchParams();
-      params.set('available', 'true');
-      if (brand)    params.set('brand',     brand);
-      if (type)     params.set('type',      type);
-      if (minPrice) params.set('min_price', minPrice);
-      if (maxPrice) params.set('max_price', maxPrice);
-
-      window.location.href = 'cars.html?' + params.toString();
-    }
-
-    // Allow pressing Enter in search inputs
+    // ── Init ───────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', () => {
       updateHeaderForAuth();
       loadFeaturedCars();
       loadTemplates();
-
-      ['searchBrand', 'searchMinPrice', 'searchMaxPrice'].forEach(id => {
-        document.getElementById(id).addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') searchCars();
-        });
-      });
-      document.getElementById('searchType').addEventListener('change', searchCars);
     });
   </script>
 </body>
+
 </html>

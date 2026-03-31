@@ -1,11 +1,156 @@
 <!DOCTYPE html>
 <html lang="bg">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Детайли за автомобил - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:wght@400;600&display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    /* ── Unavailability notice ───────────────────────────────── */
+    .unavail-notice {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: linear-gradient(135deg, rgba(233, 138, 21, 0.10), rgba(233, 138, 21, 0.04));
+      border: 1px solid rgba(233, 138, 21, 0.35);
+      border-left: 3px solid #E98A15;
+      border-radius: 10px;
+      padding: 18px 20px;
+      margin-bottom: 20px;
+    }
+
+    .unavail-notice-icon {
+      font-size: 1.6rem;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+
+    .unavail-notice-body h4 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.05rem;
+      color: #E98A15;
+      margin-bottom: 5px;
+    }
+
+    .unavail-notice-body p {
+      font-size: 0.88rem;
+      color: rgba(236, 229, 240, 0.7);
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    .unavail-notice-body .next-avail {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 10px;
+      background: rgba(40, 167, 69, 0.12);
+      border: 1px solid rgba(40, 167, 69, 0.3);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.85rem;
+      color: #6fcf97;
+      font-weight: 500;
+    }
+
+    .unavail-notice-body .next-avail::before {
+      content: '✓';
+    }
+
+    /* Booking overlap notice (different from maintenance) */
+    .booked-notice {
+      background: linear-gradient(135deg, rgba(220, 53, 69, 0.08), rgba(220, 53, 69, 0.03));
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      border-left: 3px solid #dc3545;
+    }
+
+    .booked-notice .unavail-notice-body h4 {
+      color: #f08080;
+    }
+
+    /* ── Status badge ────────────────────────────────────────── */
+    .avail-status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .avail-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .avail-pill.free {
+      background: rgba(40, 167, 69, 0.18);
+      border: 1px solid rgba(40, 167, 69, 0.35);
+      color: #6fcf97;
+    }
+
+    .avail-pill.booked {
+      background: rgba(220, 53, 69, 0.15);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      color: #f08080;
+    }
+
+    .avail-pill.maint {
+      background: rgba(233, 138, 21, 0.15);
+      border: 1px solid rgba(233, 138, 21, 0.35);
+      color: #E98A15;
+    }
+
+    .avail-pill-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+    }
+
+    .avail-pill.free .avail-pill-dot {
+      background: #28a745;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    .avail-pill.booked .avail-pill-dot {
+      background: #dc3545;
+    }
+
+    .avail-pill.maint .avail-pill-dot {
+      background: #E98A15;
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1)
+      }
+
+      50% {
+        opacity: 0.4;
+        transform: scale(0.7)
+      }
+    }
+  </style>
 </head>
+
 <body>
   <header>
     <div class="container">
@@ -73,92 +218,132 @@
     const urlParams = new URLSearchParams(window.location.search);
     const carId = urlParams.get('id');
 
+    function fmtISO(iso) {
+      if (!iso) return '—';
+      const [y, m, d] = iso.split('-');
+      return `${d}.${m}.${y}`;
+    }
+
     async function loadCarDetails() {
       const container = document.getElementById('carDetail');
-      
       if (!carId) {
         container.innerHTML = '<div class="alert alert-error">Не е посочен автомобил</div>';
         return;
       }
-      
+
       try {
         const car = await LuxeAuto.api.get(`/cars/${carId}`);
-        
-        const statusBadge = car.available 
-          ? '<span class="status status-approved">Наличен</span>'
-          : '<span class="status status-rejected">Не е наличен</span>';
-        
+
+        // ── Determine display state ──────────────────────────────────────
+        const today = new Date().toISOString().split('T')[0];
+        const inMaint = car.in_maintenance;
+        const isSystemBooked = !inMaint && car.next_available_date && !car.available;
+        const isFree = car.available && !inMaint;
+
+        // ── Status pill ──────────────────────────────────────────────────
+        let pillHtml = '';
+        if (isFree) {
+          pillHtml = `<span class="avail-pill free"><span class="avail-pill-dot"></span>Наличен</span>`;
+        } else if (inMaint) {
+          pillHtml = `<span class="avail-pill maint"><span class="avail-pill-dot"></span>В поддръжка</span>`;
+        } else {
+          pillHtml = `<span class="avail-pill booked"><span class="avail-pill-dot"></span>Зает</span>`;
+        }
+
+        // ── Unavailability notice block ──────────────────────────────────
+        let noticeHtml = '';
+
+        if (inMaint) {
+          const reason = car.unavailable_reason || 'Техническа поддръжка';
+          const untilStr = car.unavailable_until ? fmtISO(car.unavailable_until) : null;
+          const nextFree = car.next_available_date ? fmtISO(car.next_available_date) : null;
+
+          noticeHtml = `
+            <div class="unavail-notice">
+              <div class="unavail-notice-icon">🔧</div>
+              <div class="unavail-notice-body">
+                <h4>${reason}</h4>
+                <p>Автомобилът временно не е достъпен за резервации.${untilStr ? ` Планирана поддръжка до <strong>${untilStr}</strong>.` : ''}</p>
+                ${nextFree ? `<div class="next-avail">Свободен от: ${nextFree}</div>` : ''}
+              </div>
+            </div>`;
+
+        } else if (!isFree && car.next_available_date) {
+          const nextFree = fmtISO(car.next_available_date);
+          noticeHtml = `
+            <div class="unavail-notice booked-notice">
+              <div class="unavail-notice-icon">📅</div>
+              <div class="unavail-notice-body">
+                <h4>Автомобилът е зает</h4>
+                <p>Има активна резервация за този автомобил в момента.</p>
+                <div class="next-avail">Свободен от: ${nextFree}</div>
+              </div>
+            </div>`;
+        }
+
+        // ── Rent / CTA button ────────────────────────────────────────────
+        let ctaHtml = '';
+        if (isFree) {
+          ctaHtml = `<a href="create-request.html?car=${car.id}" class="btn btn-primary btn-lg" style="width:100%;">Наеми сега</a>`;
+        } else if (car.next_available_date) {
+          ctaHtml = `
+            <div class="alert alert-warning" style="margin-bottom:12px;">
+              Свободен от ${fmtISO(car.next_available_date)} — можете да резервирате за тази и следващи дати.
+            </div>
+            <a href="create-request.html?car=${car.id}" class="btn btn-outline btn-lg" style="width:100%;">
+              Резервирай за по-късна дата
+            </a>`;
+        } else {
+          ctaHtml = `<div class="alert alert-warning">Автомобилът не е достъпен в момента.</div>`;
+        }
+
+        // ── Full detail layout ───────────────────────────────────────────
         container.innerHTML = `
-          <div style="display:grid; grid-template-columns:1fr 1fr; gap:30px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:30px;">
             <div>
-              <img src="${car.image_url || 'https://via.placeholder.com/800x600?text=No+Image'}" 
-                   alt="${car.brand} ${car.model}" 
-                   style="width:100%; border-radius:8px; max-width:600px;">
+              <img src="${car.image_url || 'https://via.placeholder.com/800x600?text=No+Image'}"
+                   alt="${car.brand} ${car.model}"
+                   style="width:100%;border-radius:8px;max-width:600px;">
             </div>
             <div>
-              <div style="margin-bottom:20px;">
-                ${statusBadge}
+              <div class="avail-status-row">${pillHtml}</div>
+
+              ${noticeHtml}
+
+              <h2 style="font-family:'Cormorant Garamond',serif;font-size:2rem;margin-bottom:8px;">
+                ${car.brand} <span style="color:var(--cta);">${car.model}</span>
+              </h2>
+              <p style="font-size:1.1rem;color:rgba(236,229,240,0.6);margin-bottom:22px;">${car.year}</p>
+
+              <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin-bottom:24px;">
+                <div class="card"><p style="font-size:0.85rem;color:rgba(236,229,240,0.5);">Тип</p><p>${ui.getCarTypeBg(car.type)} ${car.type}</p></div>
+                <div class="card"><p style="font-size:0.85rem;color:rgba(236,229,240,0.5);">Гориво</p><p>⛽ ${car.fuel_type}</p></div>
+                <div class="card"><p style="font-size:0.85rem;color:rgba(236,229,240,0.5);">Скоростна кутия</p><p>⚙️ ${car.transmission}</p></div>
+                <div class="card"><p style="font-size:0.85rem;color:rgba(236,229,240,0.5);">Места</p><p>🪑 ${car.seats}</p></div>
+                <div class="card"><p style="font-size:0.85rem;color:rgba(236,229,240,0.5);">Пробег</p><p>📏 ${(car.mileage || 0).toLocaleString()} км</p></div>
+                <div class="card"><p style="font-size:0.85rem;color:rgba(236,229,240,0.5);">Регистрация</p><p>🔖 ${car.license_plate || 'Няма'}</p></div>
               </div>
-              <h2 style="font-size:2rem; margin-bottom:10px;">${car.brand} <span style="color:var(--cta);">${car.model}</span></h2>
-              <p style="font-size:1.2rem; color:rgba(236,229,240,0.7); margin-bottom:20px;">${car.year}</p>
-              
-              <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:15px; margin-bottom:25px;">
-                <div class="card">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Тип</p>
-                  <p style="font-size:1.1rem;">${ui.getCarTypeBg(car.type)} ${car.type}</p>
-                </div>
-                <div class="card">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Гориво</p>
-                  <p style="font-size:1.1rem;">⛽ ${car.fuel_type}</p>
-                </div>
-                <div class="card">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Скоростна кутия</p>
-                  <p style="font-size:1.1rem;">⚙️ ${car.transmission}</p>
-                </div>
-                <div class="card">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Места</p>
-                  <p style="font-size:1.1rem;">🪑 ${car.seats}</p>
-                </div>
-                <div class="card">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Пробег</p>
-                  <p style="font-size:1.1rem;">📏 ${car.mileage?.toLocaleString() || 0} км</p>
-                </div>
-                <div class="card">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6);">Регистрация</p>
-                  <p style="font-size:1.1rem;">🔖 ${car.license_plate || 'Няма'}</p>
-                </div>
-              </div>
-              
+
               ${car.description ? `
-                <div class="card" style="margin-bottom:25px;">
-                  <p style="font-size:0.9rem; color:rgba(236,229,240,0.6); margin-bottom:10px;">Описание</p>
+                <div class="card" style="margin-bottom:24px;">
+                  <p style="font-size:0.85rem;color:rgba(236,229,240,0.5);margin-bottom:8px;">Описание</p>
                   <p>${car.description}</p>
-                </div>
-              ` : ''}
-              
-              <div style="background:linear-gradient(135deg, rgba(75,136,162,0.2), rgba(233,168,21,0.1)); 
-                          padding:25px; border-radius:8px; text-align:center;">
-                <p style="font-size:1.2rem; margin-bottom:10px;">Цена на ден</p>
-                <p style="font-size:2.5rem; font-weight:bold; color:var(--cta);">${ui.formatPrice(car.price_per_day)}</p>
+                </div>` : ''}
+
+              <div style="background:linear-gradient(135deg,rgba(75,136,162,0.2),rgba(233,168,21,0.1));padding:24px;border-radius:8px;text-align:center;margin-bottom:20px;">
+                <p style="font-size:1rem;margin-bottom:8px;">Цена на ден</p>
+                <p style="font-family:'Cormorant Garamond',serif;font-size:2.6rem;font-weight:600;color:var(--cta);">
+                  ${ui.formatPrice(car.price_per_day)}
+                </p>
               </div>
-              
-              <div style="margin-top:25px;">
-                ${car.available ? `
-                  <a href="create-request.html?car=${car.id}" class="btn btn-primary btn-lg" style="width:100%;">
-                    Наеми сега
-                  </a>
-                ` : `
-                  <div class="alert alert-warning">Този автомобил не е наличен в момента</div>
-                `}
-                <a href="cars.html" class="btn btn-outline" style="margin-top:10px; width:100%;">
-                  ← Обратно към автомобили
-                </a>
-              </div>
+
+              ${ctaHtml}
+              <a href="cars.html" class="btn btn-outline" style="margin-top:10px;width:100%;">← Обратно към автомобили</a>
             </div>
-          </div>
-        `;
-      } catch (error) {
-        container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+          </div>`;
+
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
       }
     }
 
@@ -168,5 +353,5 @@
     });
   </script>
 </body>
-</html>
 
+</html>
