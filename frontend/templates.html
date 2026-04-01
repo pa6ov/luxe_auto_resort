@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Шаблони и пакети - Luxe Auto Resort</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    .template-actions { display: flex; gap: 10px; justify-content: center; margin-top: 15px; }
+    .template-comments { margin-top: 20px; display: none; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 20px; }
+  </style>
 </head>
 <body>
   <header>
@@ -106,11 +110,199 @@
               </div>
             ` : ''}
             
-            <a href="create-request.html?template=${t.id}" class="btn btn-primary">Избери пакет</a>
+            <div class="template-actions">
+              <a href="create-request.html?template=${t.id}" class="btn btn-primary">Избери пакет</a>
+              <button onclick="toggleTemplateComments(${t.id})" class="btn btn-secondary">💬 Мнения</button>
+            </div>
+            
+            <div id="commentsContainer-${t.id}" class="template-comments"></div>
           </div>
         `).join('');
       } catch (error) {
         container.innerHTML = `<div class="alert alert-error">${error.message}</div>`;
+      }
+    }
+
+    let templateRatings = {};
+
+    function setTemplateRating(templateId, r) {
+      templateRatings[templateId] = r;
+      document.getElementById('newRatingInput-' + templateId).value = r;
+      renderStars('newStars-' + templateId, r, `setTemplateRating(${templateId},`, true);
+    }
+    
+    function setEditRating(commentId, r) {
+      document.getElementById('editRating-' + commentId).value = r;
+      renderStars('editStars-' + commentId, r, `setEditRating(${commentId},`, true);
+    }
+
+    function renderStars(containerId, active, callbackPrefix, partial = false) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      container.innerHTML = [1,2,3,4,5].map(i => {
+        const cb = partial ? `${callbackPrefix}${i})` : `${callbackPrefix}(${i})`;
+        return `<span onclick="${cb}" style="cursor:pointer; font-size:1.5rem; color:${i <= active ? 'var(--cta)' : 'rgba(233,138,21,0.25)'};">★</span>`;
+      }).join('');
+    }
+
+    async function toggleTemplateComments(templateId) {
+      const container = document.getElementById(`commentsContainer-${templateId}`);
+      if (container.style.display === 'block') {
+        container.style.display = 'none';
+      } else {
+        container.style.display = 'block';
+        await loadTemplateComments(templateId);
+      }
+    }
+
+    async function loadTemplateComments(templateId) {
+      const container = document.getElementById(`commentsContainer-${templateId}`);
+      container.innerHTML = '<div class="loading" style="min-height: 100px;">Зареждане на мнения...</div>';
+      
+      try {
+        const comments = await LuxeAuto.api.get(`/comments/templates/${templateId}`);
+        const currentUserId = LuxeAuto.auth.user?.id;
+        
+        let html = '<h4 style="margin-bottom: 15px; color: var(--cta); text-align: left;">Мнения за пакета</h4>';
+        
+        if (LuxeAuto.auth.isLoggedIn()) {
+          html += `
+            <div class="card" style="padding: 15px; margin-bottom: 20px; text-align: left; background: rgba(0,0,0,0.2);">
+              <h5 style="margin-bottom: 10px;">Оставете мнение</h5>
+              <form id="commentForm-${templateId}" onsubmit="submitTemplateComment(event, ${templateId})">
+                <div class="form-group" style="margin-bottom: 10px;">
+                   <label style="font-size: 0.85rem;">Рейтинг (по избор)</label>
+                   <div id="newStars-${templateId}" style="display:flex; gap:4px;"></div>
+                   <input type="hidden" id="newRatingInput-${templateId}" value="0">
+                </div>
+                <div class="form-group" style="margin-bottom: 10px;">
+                   <textarea id="newContent-${templateId}" required placeholder="Споделете вашето преживяване..." style="width:100%; min-height:60px; resize:vertical; padding:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:5px; color:#fff;"></textarea>
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Изпрати</button>
+                <div id="formMessage-${templateId}" style="margin-top:10px; font-size: 0.9rem;"></div>
+              </form>
+            </div>
+          `;
+        } else {
+          html += `
+            <div style="margin-bottom: 20px; font-size: 0.9rem; text-align: left;">
+              <a href="login.html" style="color: var(--cta); text-decoration: underline;">Влезте</a> или <a href="register.html" style="color: var(--cta); text-decoration: underline;">се регистрирайте</a>, за да оставите мнение.
+            </div>
+          `;
+        }
+        
+        if (comments.length === 0) {
+           html += '<p style="text-align:left; color:rgba(255,255,255,0.5); font-size: 0.9rem;">Все още няма мнения за този пакет.</p>';
+        } else {
+           html += '<div class="comments-section" style="text-align: left;">';
+           html += comments.map(c => {
+               const author = c.first_name && c.last_name ? `${c.first_name} ${c.last_name}` : 'Анонимен';
+               const isOwner = currentUserId && c.user_id === currentUserId;
+               const existingRating = c.rating || 0;
+               
+               let commentHtml = `
+                 <div class="comment" style="padding: 10px; margin-bottom: 15px; background: rgba(255,255,255,0.05); border-radius: 8px;">
+                   <div class="comment-header" style="display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px;">
+                     <span class="comment-author" style="font-weight: bold;">👤 ${author}</span>
+                     <span class="comment-date" style="opacity: 0.6;">${ui.formatDate(c.created_at)}</span>
+                   </div>`;
+                   
+               if (existingRating) {
+                   commentHtml += `<div style="color:var(--cta); font-size:1rem; margin-bottom: 5px;">
+                     ${'★'.repeat(existingRating)}${'☆'.repeat(5-existingRating)}
+                   </div>`;
+               }
+               
+               commentHtml += `<p class="comment-content" style="font-size: 0.95rem; margin: 0;">${c.content}</p>`;
+                   
+               if (isOwner) {
+                   commentHtml += `
+                   <div class="comment-actions" style="margin-top: 8px; display: flex; gap: 5px;">
+                     <button class="btn btn-sm btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="toggleEditForm(${c.id})">✏️ Редактирай</button>
+                     <button class="btn btn-sm btn-danger" style="padding: 4px 8px; font-size: 0.8rem;" onclick="deleteOwnComment(${c.id}, ${templateId})">🗑️ Изтрий</button>
+                   </div>
+                   <div class="edit-form" id="editForm-${c.id}" style="display:none; margin-top: 10px;">
+                     <div class="form-group" style="margin-bottom:8px;">
+                       <label style="font-size:0.85rem;">Рейтинг</label>
+                       <div id="editStars-${c.id}" style="display:flex; gap:4px;"></div>
+                       <input type="hidden" id="editRating-${c.id}" value="${existingRating}">
+                     </div>
+                     <div class="form-group" style="margin-bottom:8px;">
+                       <textarea id="editContent-${c.id}" style="width:100%; min-height:60px; padding:8px; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2); border-radius:5px; color:#fff;">${c.content}</textarea>
+                     </div>
+                     <div class="btn-row" style="display:flex; gap: 5px;">
+                       <button class="btn btn-sm btn-primary" onclick="saveEdit(${c.id}, ${templateId})">💾 Запази</button>
+                       <button type="button" class="btn btn-sm btn-outline" style="border: 1px solid rgba(255,255,255,0.3); color: #fff; background: transparent; padding: 4px 8px; border-radius: 4px;" onclick="toggleEditForm(${c.id})">Отказ</button>
+                     </div>
+                   </div>
+                   `;
+               }
+               
+               commentHtml += `</div>`;
+               return commentHtml;
+           }).join('');
+           html += '</div>';
+        }
+        
+        container.innerHTML = html;
+        
+        if (LuxeAuto.auth.isLoggedIn()) {
+          renderStars(`newStars-${templateId}`, templateRatings[templateId] || 0, `setTemplateRating(${templateId},`, true);
+        }
+        
+        comments.filter(c => c.user_id === currentUserId).forEach(c => {
+          renderStars('editStars-' + c.id, c.rating || 0, `setEditRating(${c.id},`, true);
+        });
+        
+      } catch (err) {
+        container.innerHTML = `<div class="alert alert-error">${err.message}</div>`;
+      }
+    }
+
+    async function submitTemplateComment(e, templateId) {
+      e.preventDefault();
+      const msg = document.getElementById(`formMessage-${templateId}`);
+      msg.innerHTML = '<span style="color:#aaa;">Изпращане...</span>';
+      try {
+        const content = document.getElementById(`newContent-${templateId}`).value;
+        const rating = templateRatings[templateId] || null;
+        
+        await LuxeAuto.api.post(`/comments/templates/${templateId}`, { content, rating });
+        
+        msg.innerHTML = '<span style="color: #4CAF50;">✅ Мнението ви е изпратено за одобрение.</span>';
+        document.getElementById(`commentForm-${templateId}`).reset();
+        templateRatings[templateId] = 0;
+        renderStars(`newStars-${templateId}`, 0, `setTemplateRating(${templateId},`, true);
+      } catch (err) {
+        msg.innerHTML = `<span style="color: #f44336;">Грешка: ${err.message}</span>`;
+      }
+    }
+
+    function toggleEditForm(commentId) {
+      const form = document.getElementById('editForm-' + commentId);
+      if (!form) return;
+      form.style.display = form.style.display === 'block' ? 'none' : 'block';
+    }
+
+    async function saveEdit(commentId, templateId) {
+      const content = document.getElementById('editContent-' + commentId).value.trim();
+      const rating  = parseInt(document.getElementById('editRating-' + commentId).value) || null;
+      if (!content) { alert('Съдържанието не може да е празно'); return; }
+      try {
+        await LuxeAuto.api.put(`/comments/${commentId}`, { content, rating, type: 'template' });
+        await loadTemplateComments(templateId);
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function deleteOwnComment(commentId, templateId) {
+      if (!confirm('Сигурни ли сте, че искате да изтриете това мнение?')) return;
+      try {
+        await LuxeAuto.api.delete(`/comments/${commentId}/own`);
+        await loadTemplateComments(templateId);
+      } catch (err) {
+        alert(err.message);
       }
     }
 
