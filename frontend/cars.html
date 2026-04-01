@@ -548,60 +548,11 @@
   <section id="cars">
     <div class="container">
 
-      <!-- Date availability search -->
-      <div class="date-search-bar">
-        <div class="date-search-label">
-          <span class="dot"></span>
-          Проверете наличност по период
-        </div>
-        <div class="date-search-grid">
-          <div class="date-field">
-            <label for="searchStartDate">Начална дата</label>
-            <input id="searchStartDate" class="flatpickr-input" type="text" placeholder="дд.мм.гггг" readonly>
-          </div>
-          <div class="date-field">
-            <label for="searchEndDate">Крайна дата</label>
-            <input id="searchEndDate" class="flatpickr-input" type="text" placeholder="дд.мм.гггг" readonly>
-          </div>
-          <button class="btn-search-dates" onclick="applyDateSearch()">
-            🔍 Търси
-          </button>
-          <button class="btn-clear-dates hidden" id="clearDatesBtn" onclick="clearDateSearch()">
-            ✕ Изчисти дати
-          </button>
-        </div>
 
-        <!-- Inline availability summary -->
-        <div class="availability-strip" id="availabilityStrip">
-          <div class="avail-counts">
-            <span class="avail-count-item">
-              <span class="avail-dot free"></span>
-              <span id="availCount">0 свободни</span>
-            </span>
-            <span class="avail-count-item">
-              <span class="avail-dot booked"></span>
-              <span id="bookedCount">0 заети</span>
-            </span>
-            <span id="periodLabel" style="color:rgba(236,229,240,0.4); font-size:0.8rem;"></span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Alternative window banner (shown when 0 available) -->
-      <div class="alt-window-banner" id="altWindowBanner">
-        <span class="alt-window-icon">📅</span>
-        <div class="alt-window-text">
-          <h4>Няма свободни автомобили за избрания период</h4>
-          <p id="altWindowMsg">Разгледайте друга дата.</p>
-        </div>
-        <button class="btn-try-alt" id="altWindowBtn" onclick="applyAlternativeWindow()">
-          Виж наличните дати →
-        </button>
-      </div>
 
       <!-- Filter toolbar (collapsible) -->
       <details class="filter-toolbar" id="filterToolbar">
-        <summary>⚙ Допълнителни филтри</summary>
+        <summary>⚙ Филтри</summary>
         <div class="filter-toolbar-grid">
           <div class="form-group">
             <label for="filterBrand">Марка</label>
@@ -726,28 +677,9 @@
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const fpStart = flatpickr('#searchStartDate', {
-      locale: 'bg',
-      dateFormat: 'd.m.Y',
-      minDate: 'today',
-      disableMobile: false,
-      onChange(selectedDates) {
-        if (selectedDates[0]) {
-          const nextDay = new Date(selectedDates[0]);
-          nextDay.setDate(nextDay.getDate() + 1);
-          fpEnd.set('minDate', nextDay);
-          // Auto-open end picker
-          if (!fpEnd.selectedDates.length) fpEnd.open();
-        }
-      }
-    });
-
-    const fpEnd = flatpickr('#searchEndDate', {
-      locale: 'bg',
-      dateFormat: 'd.m.Y',
-      minDate: new Date(today.getTime() + 86400000),
-      disableMobile: false,
-    });
+    // Date range logic removed as per request
+    const fpStart = null;
+    const fpEnd = null;
 
     // ── Populate filters from URL on load ──────────────────────────────────
     function populateFilters() {
@@ -757,18 +689,6 @@
       if (p.has('min_price')) document.getElementById('filterMinPrice').value = p.get('min_price');
       if (p.has('max_price')) document.getElementById('filterMaxPrice').value = p.get('max_price');
       if (p.has('sort')) document.getElementById('filterSort').value = p.get('sort');
-
-      if (p.has('start_date') && p.has('end_date')) {
-        // Parse yyyy-mm-dd back to d.m.Y for flatpickr
-        const parseBg = (iso) => {
-          const [y, m, d] = iso.split('-');
-          return `${d}.${m}.${y}`;
-        };
-        fpStart.setDate(parseBg(p.get('start_date')), true);
-        fpEnd.setDate(parseBg(p.get('end_date')), true);
-        activeDateRange = { start: p.get('start_date'), end: p.get('end_date') };
-        document.getElementById('clearDatesBtn').classList.remove('hidden');
-      }
     }
 
     // ── Build API URL from current UI state ────────────────────────────────
@@ -779,121 +699,48 @@
       const maxPrice = document.getElementById('filterMaxPrice').value;
       const sort = document.getElementById('filterSort').value;
 
-      let url = '/cars?';
+      let url = '/cars?available=true&';
       if (brand) url += `brand=${encodeURIComponent(brand)}&`;
       if (type) url += `type=${type}&`;
       if (minPrice) url += `min_price=${minPrice}&`;
       if (maxPrice) url += `max_price=${maxPrice}&`;
       if (sort) url += `sort=${sort}&`;
-
-      if (activeDateRange.start && activeDateRange.end) {
-        url += `start_date=${activeDateRange.start}&end_date=${activeDateRange.end}`;
-      } else {
-        url += 'available=true';
-      }
       return url;
     }
 
     // ── Trigger date search ────────────────────────────────────────────────
-    function applyDateSearch() {
-      const startDates = fpStart.selectedDates;
-      const endDates = fpEnd.selectedDates;
+    function applyDateSearch() { }
+    function clearDateSearch() { }
 
-      if (!startDates.length || !endDates.length) {
-        // Highlight inputs if empty
-        document.getElementById('searchStartDate').style.borderColor = 'var(--danger)';
-        document.getElementById('searchEndDate').style.borderColor = 'var(--danger)';
-        setTimeout(() => {
-          document.getElementById('searchStartDate').style.borderColor = '';
-          document.getElementById('searchEndDate').style.borderColor = '';
-        }, 1800);
-        return;
-      }
-
-      // Convert to ISO yyyy-mm-dd
-      const toISO = d => d.toISOString().split('T')[0];
-      activeDateRange = { start: toISO(startDates[0]), end: toISO(endDates[0]) };
-
-      document.getElementById('clearDatesBtn').classList.remove('hidden');
-      loadCars();
-    }
-
-    // ── Clear date filter ──────────────────────────────────────────────────
-    function clearDateSearch() {
-      fpStart.clear();
-      fpEnd.clear();
-      activeDateRange = { start: null, end: null };
-      alternativeWindow = null;
-
-      document.getElementById('clearDatesBtn').classList.add('hidden');
-      document.getElementById('availabilityStrip').classList.remove('show', 'has-results', 'no-results');
-      document.getElementById('altWindowBanner').classList.remove('show');
-      document.getElementById('resultsPeriodLabel').textContent = '';
-
-      loadCars();
-    }
-
-    // ── Apply alternative window from API ──────────────────────────────────
-    function applyAlternativeWindow() {
-      if (!alternativeWindow) return;
-
-      const toDisplay = (iso) => {
-        const [y, m, d] = iso.split('-');
-        return `${d}.${m}.${y}`;
-      };
-
-      fpStart.setDate(toDisplay(alternativeWindow.start), true);
-      fpEnd.setDate(toDisplay(alternativeWindow.end), true);
-      activeDateRange = { start: alternativeWindow.start, end: alternativeWindow.end };
-      loadCars();
-    }
+    function applyAlternativeWindow() { }
 
     // ── Apply extra filters ────────────────────────────────────────────────
     function applyFilters() {
       loadCars();
     }
 
-    // ── Create car card HTML with availability enhancements ────────────────
     function createEnhancedCarCard(car) {
-      const hasDateFilter = activeDateRange.start && activeDateRange.end;
-      const isAvail = car.is_available_for_period;
-
-      // Badge HTML based on new status rules
+      // Badge HTML
       let badgeHtml = '';
       if (car.status === 'unavailable') {
-         badgeHtml = '<span class="avail-badge booked" style="background:#6c757d; box-shadow:none;">Currently Out of Service</span>';
+        badgeHtml = '<span class="avail-badge booked" style="background:#6c757d; box-shadow:none;">Поддръжка</span>';
       } else if (car.status === 'rented') {
-         const until = car.rented_until ? car.rented_until.split('T')[0].split('-').reverse().join('.') : '';
-         badgeHtml = `<span class="avail-badge booked" style="background:#E98A15; box-shadow: 0 2px 10px rgba(233,138,21,0.35);">Rented until ${until}</span>`;
+        const until = car.rented_until ? car.rented_until.split('T')[0].split('-').reverse().join('.') : '';
+        badgeHtml = `<span class="avail-badge booked" style="background:#E98A15; box-shadow: 0 2px 10px rgba(233,138,21,0.35);">Зает ${until ? `(до ${until})` : ''}</span>`;
       } else {
-         badgeHtml = '<span class="avail-badge free">Ready for Rent</span>';
-      }
-
-      // Total price chip
-      let priceChipHtml = '';
-      if (hasDateFilter && isAvail && car.total_price) {
-        priceChipHtml = `
-          <div class="total-price-chip">
-            <span class="chip-amount">€${car.total_price.toFixed(2)}</span>
-            <span class="chip-label">/ ${car.rental_days} ${car.rental_days === 1 ? 'ден' : 'дни'}</span>
-          </div>
-        `;
+        badgeHtml = '<span class="avail-badge free">Наличен</span>';
       }
 
       // Rent button logic
       const isUnavailable = car.status === 'unavailable' || car.status === 'rented';
       let btnHtml = '';
       if (isUnavailable) {
-        btnHtml = `<button class="btn btn-secondary" style="width:100%; cursor:not-allowed; opacity:0.6;" disabled>Check back later</button>`;
+        btnHtml = `<button class="btn btn-secondary" style="width:100%; cursor:not-allowed; opacity:0.6;" disabled>Добавяне скоро</button>`;
       } else {
-        const rentHref = hasDateFilter && isAvail
-          ? `create-request.html?car=${car.id}&start=${activeDateRange.start}&end=${activeDateRange.end}`
-          : `car-details.html?id=${car.id}`;
-        const rentLabel = hasDateFilter && isAvail ? 'Резервирай' : 'Виж детайли';
-        btnHtml = `<a href="${rentHref}" class="btn btn-primary" style="width:100%">${rentLabel}</a>`;
+        btnHtml = `<a href="car-details.html?id=${car.id}" class="btn btn-primary" style="width:100%">Виж детайли</a>`;
       }
 
-      const cardClass = isUnavailable || (hasDateFilter && !isAvail) ? 'car-card car-booked' : 'car-card';
+      const cardClass = isUnavailable ? 'car-card car-booked' : 'car-card';
 
       return `
         <div class="${cardClass}" data-id="${car.id}">
@@ -910,7 +757,11 @@
               <span>⚙️ ${car.transmission}</span>
               <span>⛽ ${car.fuel_type}</span>
             </div>
-            ${priceChipHtml}
+            ${car.status === 'unavailable' && car.unavailable_reason ? `
+              <div style="font-size: 0.82rem; color: rgba(236, 229, 240, 0.6); background: rgba(108, 117, 125, 0.1); border-left: 2px solid #6c757d; padding: 6px 10px; margin-bottom: 14px;">
+                💡 ${car.unavailable_reason}
+              </div>
+            ` : ''}
             <p class="car-price">${ui.formatPrice(car.price_per_day)} <span>/ ден</span></p>
             ${btnHtml}
           </div>
@@ -921,122 +772,27 @@
     // ── Main load function ─────────────────────────────────────────────────
     async function loadCars() {
       const container = document.getElementById('carsGrid');
-      const strip = document.getElementById('availabilityStrip');
-      const altBanner = document.getElementById('altWindowBanner');
       const countEl = document.getElementById('resultsCount');
-      const periodEl = document.getElementById('resultsPeriodLabel');
 
-      // Show skeleton while loading
+      // Show skeleton
       container.innerHTML = [1, 2, 3].map(() => `
-        <div class="skeleton-card">
-          <div class="skeleton-img"></div>
-          <div class="skeleton-body">
-            <div class="skeleton-line"></div>
-            <div class="skeleton-line w60"></div>
-            <div class="skeleton-line w40"></div>
-          </div>
-        </div>
+        <div class="skeleton-card"><div class="skeleton-img"></div><div class="skeleton-body"><div class="skeleton-line"></div><div class="skeleton-line w60"></div><div class="skeleton-line w40"></div></div></div>
       `).join('');
-
-      // Hide previous banners
-      strip.classList.remove('show', 'has-results', 'no-results');
-      altBanner.classList.remove('show');
 
       try {
         const url = buildApiUrl();
-        const resp = await LuxeAuto.api.get(url);
+        const cars = await LuxeAuto.api.get(url);
 
-        // resp is already unwrapped (main.js returns data.data when success+data)
-        // but meta is separate — we need the raw response for meta.
-        // Re-fetch raw for meta if date filter active
-        let cars = resp;
-        let meta = null;
-
-        if (activeDateRange.start && activeDateRange.end) {
-          // Re-request to get meta (api.get unwraps data, so we fetch raw here)
-          const raw = await fetch(
-            `${window.LuxeAuto._apiBase || (() => {
-              const h = window.location.hostname;
-              const p = (h === 'localhost' || h === '127.0.0.1') ? '3000' : (window.location.port || '3000');
-              return `http://${h}:${p}/api`;
-            })()}${url}`,
-            { headers: LuxeAuto.auth.token ? { Authorization: `Bearer ${LuxeAuto.auth.token}` } : {} }
-          );
-          const json = await raw.json();
-          if (json.success) {
-            cars = json.data;
-            meta = json.meta || null;
-          }
-        }
-
-        // ── Availability strip ───────────────────────────────────────────
-        if (activeDateRange.start && activeDateRange.end) {
-          const freeCount = cars.filter(c => c.is_available_for_period).length;
-          const bookedCount = cars.filter(c => !c.is_available_for_period).length;
-
-          document.getElementById('availCount').textContent = `${freeCount} свободни`;
-          document.getElementById('bookedCount').textContent = `${bookedCount} заети`;
-
-          const fmt = (iso) => {
-            const [y, m, d] = iso.split('-');
-            return `${d}.${m}.${y}`;
-          };
-          document.getElementById('periodLabel').textContent =
-            `${fmt(activeDateRange.start)} – ${fmt(activeDateRange.end)}`;
-
-          strip.classList.add('show');
-          strip.classList.add(freeCount > 0 ? 'has-results' : 'no-results');
-
-          // Period label in results header
-          periodEl.textContent = meta
-            ? `${meta.rental_days} ${meta.rental_days === 1 ? 'ден' : 'дни'} · ${fmt(activeDateRange.start)} → ${fmt(activeDateRange.end)}`
-            : '';
-
-          // ── Alternative window banner ──────────────────────────────────
-          if (meta && meta.alternative_window) {
-            alternativeWindow = meta.alternative_window;
-            document.getElementById('altWindowMsg').textContent =
-              `Намерихме свободни автомобили за ${fmt(meta.alternative_window.start)} – ${fmt(meta.alternative_window.end)}.`;
-            altBanner.classList.add('show');
-          } else {
-            alternativeWindow = null;
-          }
-        } else {
-          periodEl.textContent = '';
-        }
-
-        // ── Render cars ──────────────────────────────────────────────────
         if (cars.length === 0) {
           countEl.innerHTML = '<span>0</span> автомобила';
-          container.innerHTML = `
-            <div class="empty-state" style="grid-column:1/-1;">
-              <h3>Няма намерени автомобили</h3>
-              <p>Опитайте с различни филтри или период</p>
-            </div>`;
+          container.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><h3>Няма намерени автомобили</h3></div>`;
           return;
         }
 
-        // When date filter is active: show available first, then booked
-        if (activeDateRange.start) {
-          cars = [
-            ...cars.filter(c => c.is_available_for_period),
-            ...cars.filter(c => !c.is_available_for_period),
-          ];
-        }
-
-        const freeForDisplay = activeDateRange.start
-          ? cars.filter(c => c.is_available_for_period).length
-          : cars.length;
-
-        countEl.innerHTML = activeDateRange.start
-          ? `<span>${freeForDisplay}</span> свободни от ${cars.length}`
-          : `<span>${cars.length}</span> автомобила`;
-
+        countEl.innerHTML = `<span>${cars.length}</span> автомобила`;
         container.innerHTML = cars.map(c => createEnhancedCarCard(c)).join('');
-
       } catch (err) {
-        container.innerHTML = `
-          <div class="alert alert-error" style="grid-column:1/-1;">${err.message}</div>`;
+        container.innerHTML = `<div class="alert alert-error" style="grid-column:1/-1;">${err.message}</div>`;
       }
     }
 

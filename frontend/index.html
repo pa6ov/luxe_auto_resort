@@ -383,73 +383,39 @@
           Проверете наличност в реално време и резервирайте за минути.
         </p>
 
-        <!-- Search widget -->
-        <div class="hero-search">
-          <div class="search-tabs">
-            <button class="search-tab active" onclick="switchTab('dates', this)">
-              📅 По период
-            </button>
-            <button class="search-tab" onclick="switchTab('quick', this)">
-              🔍 Бързо търсене
-            </button>
-          </div>
-
-          <!-- Tab: By dates -->
-          <div class="search-panel active" id="panel-dates">
-            <div class="search-row">
-              <div class="hero-field">
-                <label for="heroStart">Начало</label>
-                <input id="heroStart" type="text" placeholder="дд.мм.гггг" readonly>
+          <!-- Search widget -->
+          <div class="hero-search">
+            <h3 style="margin-bottom:18px; font-family:'DM Sans', sans-serif; font-size:0.82rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--cta);">
+              🔍 Търсене на автомобил
+            </h3>
+            
+            <div id="panel-quick">
+              <div class="search-row">
+                <div class="hero-field">
+                  <label for="quickBrand">Марка</label>
+                  <input type="text" id="quickBrand" placeholder="напр. BMW">
+                </div>
+                <div class="hero-field">
+                  <label for="quickType">Тип</label>
+                  <select id="quickType">
+                    <option value="">Всички</option>
+                    <option value="sedan">Седан</option>
+                    <option value="suv">SUV</option>
+                    <option value="coupe">Купе</option>
+                    <option value="minivan">Миниван</option>
+                    <option value="sport">Спортен</option>
+                  </select>
+                </div>
+                <div class="hero-field">
+                  <label for="quickMaxPrice">Макс. цена / ден</label>
+                  <input type="number" id="quickMaxPrice" placeholder="€500">
+                </div>
+                <button class="btn-hero-search" onclick="quickSearch()">
+                  Търси →
+                </button>
               </div>
-              <div class="hero-field">
-                <label for="heroEnd">Край</label>
-                <input id="heroEnd" type="text" placeholder="дд.мм.гггг" readonly>
-              </div>
-              <div class="hero-field">
-                <label for="heroType">Тип кола</label>
-                <select id="heroType">
-                  <option value="">Всички</option>
-                  <option value="sedan">Седан</option>
-                  <option value="suv">SUV</option>
-                  <option value="coupe">Купе</option>
-                  <option value="minivan">Миниван</option>
-                  <option value="sport">Спортен</option>
-                </select>
-              </div>
-              <button class="btn-hero-search" onclick="searchByDates()">
-                Провери →
-              </button>
             </div>
           </div>
-
-          <!-- Tab: Quick search -->
-          <div class="search-panel" id="panel-quick">
-            <div class="search-row">
-              <div class="hero-field">
-                <label for="quickBrand">Марка</label>
-                <input type="text" id="quickBrand" placeholder="напр. BMW">
-              </div>
-              <div class="hero-field">
-                <label for="quickType">Тип</label>
-                <select id="quickType">
-                  <option value="">Всички</option>
-                  <option value="sedan">Седан</option>
-                  <option value="suv">SUV</option>
-                  <option value="coupe">Купе</option>
-                  <option value="minivan">Миниван</option>
-                  <option value="sport">Спортен</option>
-                </select>
-              </div>
-              <div class="hero-field">
-                <label for="quickMaxPrice">Макс. цена / ден</label>
-                <input type="number" id="quickMaxPrice" placeholder="€500">
-              </div>
-              <button class="btn-hero-search" onclick="quickSearch()">
-                Търси →
-              </button>
-            </div>
-          </div>
-        </div>
 
         <!-- Stats -->
         <div class="hero-stats">

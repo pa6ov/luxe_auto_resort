@@ -182,46 +182,12 @@ async function findNextAvailableWindow(requestedDays) {
 
 // ─── GET /api/cars ────────────────────────────────────────────────────────────
 router.get('/', asyncHandler(async (req, res) => {
-  const { brand, type, min_price, max_price, available, sort, start_date, end_date } = req.query;
+  const { brand, type, min_price, max_price, available, sort } = req.query;
 
-  let dateFilterActive = false;
   let blocked = new Map();
-  let rentalDays = 0;
-  let alternativeWindow = null;
 
   // ── Date-filter validation ─────────────────────────────────────────────────
-  if (start_date || end_date) {
-    if (!start_date || !end_date) {
-      return res.status(400).json({
-        success: false,
-        error: {
-          message: 'Трябва да посочите и двете дати',
-          code: ErrorCodes.VALIDATION_ERROR,
-          details: [
-            !start_date ? { field: 'start_date', message: 'Началната дата е задължителна' } : null,
-            !end_date ? { field: 'end_date', message: 'Крайната дата е задължителна' } : null,
-          ].filter(Boolean),
-        },
-      });
-    }
-
-    const start = new Date(start_date);
-    const end = new Date(end_date);
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-
-    if (isNaN(start.getTime()))
-      return res.status(400).json({ success: false, error: { message: 'Невалидна начална дата', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'start_date', message: 'Невалидна начална дата' }] } });
-    if (isNaN(end.getTime()))
-      return res.status(400).json({ success: false, error: { message: 'Невалидна крайна дата', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'end_date', message: 'Невалидна крайна дата' }] } });
-    if (start < today)
-      return res.status(400).json({ success: false, error: { message: 'Началната дата не може да е в миналото', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'start_date', message: 'Началната дата не може да е в миналото' }] } });
-    if (end <= start)
-      return res.status(400).json({ success: false, error: { message: 'Крайната дата трябва да е след началната', code: ErrorCodes.VALIDATION_ERROR, details: [{ field: 'end_date', message: 'Крайната дата трябва да е след началната' }] } });
-
-    rentalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    blocked = await getUnavailableCarIds(start_date, end_date);
-    dateFilterActive = true;
-  }
+  // Date filter logic removed as per request
 
   // ── Base SQL ───────────────────────────────────────────────────────────────
   let query = 'SELECT * FROM cars WHERE 1=1';
@@ -237,12 +203,7 @@ router.get('/', asyncHandler(async (req, res) => {
   if (min_price) { query += ' AND price_per_day >= ?'; params.push(min_price); }
   if (max_price) { query += ' AND price_per_day <= ?'; params.push(max_price); }
 
-  // NOTE: We never filter by available=TRUE in SQL alone when a date filter is
-  // present — we handle effective availability in JS below so we can show
-  // maintenance-blocked cars with their "until" info.
-  // When no date filter and available=true is requested, still apply SQL filter
-  // but we will additionally mask cars that are currently in maintenance.
-  if (!dateFilterActive && available === 'true') {
+  if (available === 'true') {
     query += ' AND available = TRUE';
   }
 
@@ -267,7 +228,6 @@ router.get('/', asyncHandler(async (req, res) => {
     // A car is effectively available only when:
     //   1. available flag is TRUE (not permanently deactivated by admin)
     //   2. NOT in a maintenance window today
-    // When a date filter is active, we additionally check booking overlap.
     let effectivelyAvailable = car.available && !inMaintToday;
 
     const maintInfo = {
@@ -276,54 +236,18 @@ router.get('/', asyncHandler(async (req, res) => {
       unavailable_until: car.unavailable_until || null,
       unavailable_reason: car.unavailable_reason || null,
     };
-
-    if (dateFilterActive) {
-      const blockInfo = blocked.get(car.id);
-      // A car in maintenance today is also blocked for the date range
-      // (getUnavailableCarIds already catches it, but guard here too)
-      const isFreeForPeriod = car.available && !blockInfo && !maintenanceOverlaps(car, start_date, end_date);
-
-      return {
-        ...car,
-        ...maintInfo,
-        effective_available: isFreeForPeriod,
-        is_available_for_period: isFreeForPeriod,  // kept for backwards compat
-        rental_days: rentalDays,
-        total_price: isFreeForPeriod
-          ? parseFloat((car.price_per_day * rentalDays).toFixed(2))
-          : null,
-        block_reason: blockInfo?.reason || (inMaintToday ? (car.unavailable_reason || 'Техническа поддръжка') : null),
-        available_from_date: blockInfo?.until || car.unavailable_until || null,
-      };
-    }
-
     return {
       ...car,
       ...maintInfo,
-      // KEY FIX: without date filter, expose effective availability
-      // so create-request.html and cars.html never show a maintenance car as free
+      // KEY FIX: expose current availability based on maintenance status
       effective_available: effectivelyAvailable,
     };
   });
-
-  // ── Alternative window suggestion ──────────────────────────────────────────
-  if (dateFilterActive && !enriched.some(c => c.effective_available)) {
-    alternativeWindow = await findNextAvailableWindow(rentalDays);
-  }
 
   res.json({
     success: true,
     data: enriched,
     count: enriched.length,
-    ...(dateFilterActive && {
-      meta: {
-        date_filter_active: true,
-        start_date, end_date,
-        rental_days: rentalDays,
-        unavailable_count: blocked.size,
-        alternative_window: alternativeWindow,
-      },
-    }),
   });
 }));
 

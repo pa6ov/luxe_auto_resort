@@ -509,21 +509,11 @@
 
           <!-- Date + reason fields (hidden until maintenance mode) -->
           <div id="maintFields" class="hidden">
-            <div class="maint-fields">
-              <div class="form-group">
-                <label for="maintFrom">Недостъпен от *</label>
-                <input type="text" id="maintFrom" placeholder="дд.мм.гггг" readonly>
-              </div>
-              <div class="form-group">
-                <label for="maintUntil">Недостъпен до *</label>
-                <input type="text" id="maintUntil" placeholder="дд.мм.гггг" readonly>
-              </div>
               <div class="form-group maint-reason">
                 <label for="maintReason">Причина (видима за клиентите)</label>
                 <input type="text" id="maintReason"
                   placeholder="напр. Техническа поддръжка, Ремонт на двигател, Сервиз…" maxlength="255">
               </div>
-            </div>
           </div>
 
           <input type="hidden" id="carAvailableHidden" value="true">
@@ -561,28 +551,8 @@
     }
 
     // ── Flatpickr instances ────────────────────────────────────────────────
-    let fpMaintFrom = null;
-    let fpMaintUntil = null;
-
     function initMaintPickers() {
-      if (fpMaintFrom) { fpMaintFrom.destroy(); fpMaintFrom = null; }
-      if (fpMaintUntil) { fpMaintUntil.destroy(); fpMaintUntil = null; }
-
-      fpMaintFrom = flatpickr('#maintFrom', {
-        locale: 'bg', dateFormat: 'd.m.Y',
-        onChange(dates) {
-          if (dates[0] && fpMaintUntil) {
-            const next = new Date(dates[0]);
-            next.setDate(next.getDate() + 1);
-            fpMaintUntil.set('minDate', next);
-            if (!fpMaintUntil.selectedDates.length) fpMaintUntil.open();
-          }
-        }
-      });
-      fpMaintUntil = flatpickr('#maintUntil', {
-        locale: 'bg', dateFormat: 'd.m.Y',
-        minDate: new Date(Date.now() + 86400000),
-      });
+      // Date pickers removed as per request
     }
 
     // ── Status dropdown logic ──────────────────────────────────────────────
@@ -599,7 +569,6 @@
       } else {
         fields.classList.remove('hidden');
         document.getElementById('carAvailableHidden').value = 'true';
-        if (!fpMaintFrom) initMaintPickers();
       }
     }
 
@@ -614,8 +583,6 @@
         document.getElementById('currentWindowBox').classList.remove('show');
         document.getElementById('carStatusDropdown').value = 'available';
         handleStatusChange();
-        if (fpMaintFrom) fpMaintFrom.clear();
-        if (fpMaintUntil) fpMaintUntil.clear();
         document.getElementById('maintReason').value = '';
       } catch (e) { alert(e.message); }
     }
@@ -670,11 +637,8 @@
 
           const statusCell = statusLabel;
           let maintCell = '—';
-          if (inMaint) {
-            maintCell = `<span class="maint-badge"><span class="maint-badge-dot"></span>До ${fmtDate(c.unavailable_until)}</span>`
-              + (c.unavailable_reason ? `<br><small style="color:rgba(236,229,240,0.45);font-size:0.75rem;">${c.unavailable_reason}</small>` : '');
-          } else if (hasFuture) {
-            maintCell = `<span style="color:rgba(236,229,240,0.4);font-size:0.82rem;">от ${fmtDate(c.unavailable_from)}<br>до ${fmtDate(c.unavailable_until)}</span>`;
+          if (c.status === 'unavailable' && c.unavailable_reason) {
+            maintCell = `<small style="color:rgba(236,229,240,0.45);font-size:0.75rem;">${c.unavailable_reason}</small>`;
           }
           return `<tr>
             <td>${c.id}</td><td>${c.brand} ${c.model}</td>
@@ -703,11 +667,7 @@
       document.getElementById('carImage').value = car?.image_url || '';
       document.getElementById('carDesc').value = car?.description || '';
 
-      // Reset pickers
-      if (fpMaintFrom) { fpMaintFrom.destroy(); fpMaintFrom = null; }
-      if (fpMaintUntil) { fpMaintUntil.destroy(); fpMaintUntil = null; }
-      document.getElementById('maintFrom').value = '';
-      document.getElementById('maintUntil').value = '';
+      // Reset maintenance fields
       document.getElementById('maintReason').value = '';
 
       // Reset status UI
@@ -731,17 +691,6 @@
       document.getElementById('maintFields').classList.add('hidden');
       document.getElementById('carAvailableHidden').value = 'true';
       handleStatusChange();
-      document.getElementById('currentWindowBox').classList.remove('show');
-
-      // If car already has a window, show the info box
-      if (car?.unavailable_from && car?.unavailable_until) {
-        document.getElementById('currentWindowText').innerHTML =
-          `<strong>Текущ прозорец за недостъпност:</strong><br>
-           ${fmtDate(car.unavailable_from)} → ${fmtDate(car.unavailable_until)}` +
-          (car.unavailable_reason ? `<br><em style="color:rgba(236,229,240,0.6)">${car.unavailable_reason}</em>` : '');
-        document.getElementById('currentWindowBox').classList.add('show');
-      }
-
       document.getElementById('carModal').classList.add('active');
     }
 
@@ -782,17 +731,11 @@
           targetId = created?.id || null;
         }
 
-        // Save maintenance window if mode is active and we have an ID
-        if (carStatusMode === 'maintenance' && targetId) {
-          const fromDisp = document.getElementById('maintFrom').value;
-          const untilDisp = document.getElementById('maintUntil').value;
-          if (!fromDisp || !untilDisp) {
-            alert('Моля, посочете двете дати за недостъпност');
-            return;
-          }
+        // Save maintenance reason if mode is active (dates removed)
+        if (carStatusMode === 'unavailable' && targetId) {
           await LuxeAuto.api.patch(`/cars/${targetId}/availability`, {
-            unavailable_from: displayToISO(fromDisp),
-            unavailable_until: displayToISO(untilDisp),
+            unavailable_from: null,
+            unavailable_until: null,
             unavailable_reason: document.getElementById('maintReason').value.trim() || null,
           });
         }
