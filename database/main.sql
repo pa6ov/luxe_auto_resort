@@ -459,16 +459,11 @@ ALTER TABLE cars
   ADD COLUMN unavailable_until  DATE         NULL DEFAULT NULL
     COMMENT 'End of admin-set maintenance / unavailability window (inclusive)',
   ADD COLUMN unavailable_reason VARCHAR(255) NULL DEFAULT NULL
-    COMMENT 'Human-readable reason shown to clients (e.g. Техническа поддръжка)',
-  ADD COLUMN status             ENUM('available', 'unavailable', 'rented') DEFAULT 'available'
-    COMMENT 'Primary source of truth for current availability status',
-  ADD COLUMN rented_until       DATETIME     NULL DEFAULT NULL
-    COMMENT 'Used to auto-clear the rented status';
+    COMMENT 'Human-readable reason shown to clients (e.g. Техническа поддръжка)';
 
 -- Index so the availability query can filter on the window quickly
 ALTER TABLE cars
-  ADD INDEX idx_unavail_window (unavailable_from, unavailable_until),
-  ADD INDEX idx_status (status);
+  ADD INDEX idx_unavail_window (unavailable_from, unavailable_until);
 
 -- Verify
 SHOW COLUMNS FROM cars LIKE 'unavailable%';
