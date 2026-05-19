@@ -295,8 +295,12 @@
 
       document.getElementById('requestForm').addEventListener('submit', submitRequest);
 
-      // Re-calculate if dates were pre-filled from URL
-      if (preselectedStart && preselectedEnd) updatePrice();
+      // Apply template constraints if a template is selected and dates are pre-filled
+      if (preselectedStart) {
+        onDateChange();
+      } else if (preselectedStart && preselectedEnd) {
+        updatePrice();
+      }
     }
 
     // ── Car tiles ──────────────────────────────────────────────────────────
@@ -357,16 +361,53 @@
       updatePrice();
     }
 
-    // ── Date change: re-evaluate blocked state against new dates ──────────
     function onDateChange() {
-      const startVal = document.getElementById('start_date').value;
-      const endVal = document.getElementById('end_date').value;
+      const startInput = document.getElementById('start_date');
+      const startVal = startInput.value;
+      const endInput = document.getElementById('end_date');
 
       if (startVal) {
-        const minEnd = new Date(startVal);
-        minEnd.setDate(minEnd.getDate() + 1);
-        document.getElementById('end_date').min = minEnd.toISOString().split('T')[0];
+        const start = new Date(startVal);
+
+        // Enforce specific start days for Weekend package
+        if (selectedTemplate && 
+           (selectedTemplate.name.toLowerCase().includes('уикенд') || selectedTemplate.name.toLowerCase().includes('weekend'))) {
+          const day = start.getDay();
+          // 5 = Friday, 6 = Saturday, 0 = Sunday
+          if (day !== 5 && day !== 6 && day !== 0) {
+            alert('Уикенд пакетът може да започва само в петък, събота или неделя.');
+            startInput.value = '';
+            endInput.value = '';
+            document.getElementById('priceChip')?.classList.remove('show');
+            return;
+          }
+        }
+
+        if (selectedTemplate && selectedTemplate.duration_days) {
+          // Template has a fixed duration, enforce it
+          const start = new Date(startVal);
+          start.setDate(start.getDate() + selectedTemplate.duration_days);
+          const fixedEndStr = start.toISOString().split('T')[0];
+          
+          endInput.value = fixedEndStr;
+          endInput.min = fixedEndStr;
+          endInput.max = fixedEndStr;
+          endInput.readOnly = true;
+          endInput.style.pointerEvents = 'none';
+          endInput.style.opacity = '0.6';
+        } else {
+          // Standard rental, user can choose end date
+          const minEnd = new Date(startVal);
+          minEnd.setDate(minEnd.getDate() + 1);
+          endInput.min = minEnd.toISOString().split('T')[0];
+          endInput.max = '';
+          endInput.readOnly = false;
+          endInput.style.pointerEvents = 'auto';
+          endInput.style.opacity = '1';
+        }
       }
+
+      const endVal = endInput.value;
 
       // Re-render tiles to reflect date-specific maintenance overlap
       // (the effective_available on cars from the API is today-based;

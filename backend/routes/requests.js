@@ -167,14 +167,44 @@ router.post('/', requireAuth, asyncHandler(async (req, res) => {
     });
   }
 
-  // ── Step 5: Calculate price ───────────────────────────────────────────────────
+  // ── Step 5: Calculate price & Template validation ──────────────────────────────
   const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
   const basePrice = cars.reduce((sum, c) => sum + parseFloat(c.price_per_day), 0);
 
   let discount = 0;
   if (template_id) {
     const [templates] = await pool.query('SELECT * FROM templates WHERE id = ?', [template_id]);
-    if (templates.length > 0) discount = templates[0].discount_percent || 0;
+    if (templates.length > 0) {
+      const tpl = templates[0];
+      discount = tpl.discount_percent || 0;
+      
+      // Enforce fixed duration for templates
+      if (tpl.duration_days && days !== tpl.duration_days) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: `Пакетът "${tpl.name}" изисква точно ${tpl.duration_days} дни. Избрани са ${days} дни.`,
+            code: ErrorCodes.INVALID_VALUE,
+            details: [{ field: 'end_date', message: `Невалиден брой дни за избран шаблон` }]
+          }
+        });
+      }
+
+      // Enforce start day rules for Weekend package
+      if (tpl.name.toLowerCase().includes('уикенд') || tpl.name.toLowerCase().includes('weekend')) {
+        const day = start.getDay();
+        if (day !== 5 && day !== 6 && day !== 0) { // 5=Fri, 6=Sat, 0=Sun
+          return res.status(400).json({
+            success: false,
+            error: {
+              message: `Уикенд пакетът може да започва само в петък, събота или неделя.`,
+              code: ErrorCodes.INVALID_VALUE,
+              details: [{ field: 'start_date', message: `Невалидна начална дата за уикенд пакет` }]
+            }
+          });
+        }
+      }
+    }
   }
 
   const totalPrice = basePrice * days * (1 - discount / 100);

@@ -86,12 +86,12 @@ app.get('/api/admin/dashboard', require('./middleware/auth').requireAuth, requir
     });
   } catch (error) {
     console.error('Dashboard error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      error: { 
-        message: 'Грешка при зареждане на dashboard', 
-        code: 'DASHBOARD_ERROR' 
-      } 
+      error: {
+        message: 'Грешка при зареждане на dashboard',
+        code: 'DASHBOARD_ERROR'
+      }
     });
   }
 });
@@ -130,10 +130,10 @@ app.get('/api/admin/audit-log',
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.json({
     success: true,
-    status: 'ok', 
-    timestamp: new Date().toISOString() 
+    status: 'ok',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -188,12 +188,12 @@ const server = app.listen(PORT, "0.0.0.0", () => {
   console.log('\n⌨️  Keyboard shortcuts:');
   console.log('   r - Restart server');
   console.log('   x - Exit\n');
-  
+
   // Enable keyboard input (only in TTY mode)
   if (process.stdin.isTTY) {
     // Enable keyboard input
-readline.emitKeypressEvents(process.stdin);
-process.stdin.setRawMode(true);
+    readline.emitKeypressEvents(process.stdin);
+    process.stdin.setRawMode(true);
 
     process.stdin.on('keypress', (str, key) => {
       if (key.name === 'r') {
